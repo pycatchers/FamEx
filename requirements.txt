@@ -1,0 +1,15 @@
+User buying some products from shop
+some shops will provide invoice/bill but some small shops will not
+App will record prices from shops and provide some analytics
+Two options to enter data,
+1. take photo of the invoice/bill, extract data, save to dynamo db, save photo to s3
+2. enter manually
+Shop Details - Name, address, geolocation
+Item Name, MRP, disc, bought price, date bought
+UI:
+Shops - Shows shops list
+Recently Visited Shops
+Items bought frequently
+Clicking on a shop shows the items bought group by month
+Price variations in same shop
+Comparing with other shops
