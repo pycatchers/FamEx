@@ -2,7 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import auth, family, documents, loans, insurance, reminders
+from app.middleware.rate_limit import RateLimitMiddleware
+from app.routers import auth, family, documents, loans, insurance, reminders, shopping, ai, medical, dashboard
 
 app = FastAPI(
     title="NestLedger API",
@@ -23,6 +24,11 @@ app.add_middleware(
 )
 
 # ---------------------------------------------------------------------------
+# Rate limiting  (120 req/min per IP; exempt: /health, /, /docs, /redoc)
+# ---------------------------------------------------------------------------
+app.add_middleware(RateLimitMiddleware, requests_per_minute=120)
+
+# ---------------------------------------------------------------------------
 # Routers
 # ---------------------------------------------------------------------------
 app.include_router(auth.router)
@@ -31,6 +37,10 @@ app.include_router(documents.router)
 app.include_router(loans.router)
 app.include_router(insurance.router)
 app.include_router(reminders.router)
+app.include_router(shopping.router)
+app.include_router(ai.router)
+app.include_router(medical.router)
+app.include_router(dashboard.router)
 
 
 # ---------------------------------------------------------------------------

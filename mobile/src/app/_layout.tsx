@@ -1,6 +1,7 @@
 import '../global.css';
 import '@/i18n';
 import { Slot, useRouter, useSegments } from 'expo-router';
+import { BiometricGate } from '@/components/biometric-gate';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/lib/query-client';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
@@ -40,7 +41,9 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <AuthGuard>
-          <Slot />
+          <BiometricGate>
+            <Slot />
+          </BiometricGate>
         </AuthGuard>
       </AuthProvider>
     </QueryClientProvider>

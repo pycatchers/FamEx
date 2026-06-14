@@ -24,6 +24,14 @@ import app.models.document  # noqa: E402, F401  — ensure model is registered
 import app.models.loan  # noqa: E402, F401  — ensure model is registered
 import app.models.insurance  # noqa: E402, F401  — ensure model is registered
 import app.models.reminder  # noqa: E402, F401  — ensure model is registered
+import app.models.shop  # noqa: E402, F401  — ensure model is registered
+import app.models.bill  # noqa: E402, F401  — ensure model is registered
+import app.models.purchase  # noqa: E402, F401  — ensure model is registered
+import app.models.checklist  # noqa: E402, F401  — ensure model is registered
+import app.models.hospital  # noqa: E402, F401  — ensure model is registered
+import app.models.doctor  # noqa: E402, F401  — ensure model is registered
+import app.models.prescription  # noqa: E402, F401  — ensure model is registered
+import app.models.medicine  # noqa: E402, F401  — ensure model is registered
 
 # Override the URL from alembic.ini with the one from settings
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)

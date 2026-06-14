@@ -34,7 +34,14 @@
     "insuranceRenewals": "காப்பீடு புதுப்பிப்பு",
     "medicalFollowUps": "மருத்துவ பின்தொடர்தல்",
     "monthlySpending": "மாதாந்திர செலவு",
-    "recentPurchases": "சமீபத்திய வாங்குதல்"
+    "recentPurchases": "சமீபத்திய வாங்குதல்",
+    "thisMonth": "இந்த மாத செலவு",
+    "upcomingEMIs": "வரவிருக்கும் EMI",
+    "insuranceDue": "காப்பீடு செலுத்தவேண்டும்",
+    "followUps": "பின்தொடர்கள்",
+    "quickActions": "விரைவு செயல்கள்",
+    "search": "தேடு",
+    "noResults": "முடிவுகள் இல்லை"
   },
   "family": {
     "title": "குடும்ப உறுப்பினர்கள்",
@@ -62,5 +69,28 @@
     "addPolicy": "பாலிசி சேர்",
     "noPolicies": "இன்னும் காப்பீடு பாலிசிகள் இல்லை",
     "deletePolicy": "பாலிசி நீக்கு"
+  },
+  "shopping": {
+    "title": "கடை",
+    "shops": "கடைகள்",
+    "bills": "பில்கள்",
+    "analytics": "பகுப்பாய்வு",
+    "checklist": "பட்டியல்",
+    "addBill": "பில் சேர்",
+    "addShop": "கடை சேர்",
+    "thisMonth": "இந்த மாதம்",
+    "lastMonth": "கடந்த மாதம்"
+  },
+  "medical": {
+    "title": "மருத்துவம்",
+    "hospitals": "மருத்துவமனைகள்",
+    "doctors": "மருத்துவர்கள்",
+    "prescriptions": "மருந்து சீட்டுகள்",
+    "medicines": "மருந்துகள்",
+    "activeMedicines": "செயலில் உள்ள மருந்துகள்",
+    "addPrescription": "மருந்து சீட்டு சேர்",
+    "addHospital": "மருத்துவமனை சேர்",
+    "addDoctor": "மருத்துவர் சேர்",
+    "followUp": "பின்தொடர்"
   }
 }

@@ -34,7 +34,14 @@
     "insuranceRenewals": "Insurance Renewals",
     "medicalFollowUps": "Medical Follow-ups",
     "monthlySpending": "Monthly Spending",
-    "recentPurchases": "Recent Purchases"
+    "recentPurchases": "Recent Purchases",
+    "thisMonth": "This Month Spending",
+    "upcomingEMIs": "Upcoming EMIs",
+    "insuranceDue": "Insurance Due",
+    "followUps": "Follow-ups",
+    "quickActions": "Quick Actions",
+    "search": "Search",
+    "noResults": "No results found"
   },
   "family": {
     "title": "Family Members",
@@ -62,5 +69,28 @@
     "addPolicy": "Add Policy",
     "noPolicies": "No insurance policies yet",
     "deletePolicy": "Delete Policy"
+  },
+  "shopping": {
+    "title": "Shopping",
+    "shops": "Shops",
+    "bills": "Bills",
+    "analytics": "Analytics",
+    "checklist": "Checklist",
+    "addBill": "Add Bill",
+    "addShop": "Add Shop",
+    "thisMonth": "This Month",
+    "lastMonth": "Last Month"
+  },
+  "medical": {
+    "title": "Medical",
+    "hospitals": "Hospitals",
+    "doctors": "Doctors",
+    "prescriptions": "Prescriptions",
+    "medicines": "Medicines",
+    "activeMedicines": "Active Medicines",
+    "addPrescription": "Add Prescription",
+    "addHospital": "Add Hospital",
+    "addDoctor": "Add Doctor",
+    "followUp": "Follow-up"
   }
 }
