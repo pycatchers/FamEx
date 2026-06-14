@@ -1,0 +1,66 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Retry"
+  },
+  "tabs": {
+    "dashboard": "Dashboard",
+    "family": "Family",
+    "shopping": "Shopping",
+    "medical": "Medical",
+    "more": "More"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "displayName": "Display Name",
+    "forgotPassword": "Forgot Password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "upcomingEmis": "Upcoming EMIs",
+    "insuranceRenewals": "Insurance Renewals",
+    "medicalFollowUps": "Medical Follow-ups",
+    "monthlySpending": "Monthly Spending",
+    "recentPurchases": "Recent Purchases"
+  },
+  "family": {
+    "title": "Family Members",
+    "addMember": "Add Member",
+    "editMember": "Edit Member",
+    "noMembers": "No family members yet",
+    "deleteMember": "Delete Member"
+  },
+  "documents": {
+    "title": "Documents",
+    "addDocument": "Add Document",
+    "noDocuments": "No documents found",
+    "deleteDocument": "Delete Document"
+  },
+  "loans": {
+    "title": "Loans & EMI",
+    "addLoan": "Add Loan",
+    "noLoans": "No loans tracked yet",
+    "emiSchedule": "EMI Schedule",
+    "markPaid": "Mark Paid",
+    "deleteLoan": "Delete Loan"
+  },
+  "insurance": {
+    "title": "Insurance",
+    "addPolicy": "Add Policy",
+    "noPolicies": "No insurance policies yet",
+    "deletePolicy": "Delete Policy"
+  }
+}

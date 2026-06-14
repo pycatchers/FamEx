@@ -1,0 +1,66 @@
+{
+  "common": {
+    "save": "சேமி",
+    "cancel": "ரத்து",
+    "delete": "நீக்கு",
+    "edit": "திருத்து",
+    "add": "சேர்",
+    "search": "தேடு",
+    "loading": "ஏற்றுகிறது...",
+    "error": "ஏதோ தவறு ஏற்பட்டது",
+    "retry": "மீண்டும் முயற்சி"
+  },
+  "tabs": {
+    "dashboard": "டாஷ்போர்டு",
+    "family": "குடும்பம்",
+    "shopping": "கடை",
+    "medical": "மருத்துவம்",
+    "more": "மேலும்"
+  },
+  "auth": {
+    "login": "உள்நுழை",
+    "register": "பதிவு",
+    "email": "மின்னஞ்சல்",
+    "password": "கடவுச்சொல்",
+    "confirmPassword": "கடவுச்சொல்லை உறுதிப்படுத்து",
+    "displayName": "காட்சி பெயர்",
+    "forgotPassword": "கடவுச்சொல் மறந்துவிட்டதா?",
+    "noAccount": "கணக்கு இல்லையா?",
+    "hasAccount": "ஏற்கனவே கணக்கு உள்ளதா?"
+  },
+  "dashboard": {
+    "title": "டாஷ்போர்டு",
+    "upcomingEmis": "வரவிருக்கும் EMI-கள்",
+    "insuranceRenewals": "காப்பீடு புதுப்பிப்பு",
+    "medicalFollowUps": "மருத்துவ பின்தொடர்தல்",
+    "monthlySpending": "மாதாந்திர செலவு",
+    "recentPurchases": "சமீபத்திய வாங்குதல்"
+  },
+  "family": {
+    "title": "குடும்ப உறுப்பினர்கள்",
+    "addMember": "உறுப்பினர் சேர்",
+    "editMember": "உறுப்பினர் திருத்து",
+    "noMembers": "இன்னும் குடும்ப உறுப்பினர்கள் இல்லை",
+    "deleteMember": "உறுப்பினர் நீக்கு"
+  },
+  "documents": {
+    "title": "ஆவணங்கள்",
+    "addDocument": "ஆவணம் சேர்",
+    "noDocuments": "ஆவணங்கள் இல்லை",
+    "deleteDocument": "ஆவணம் நீக்கு"
+  },
+  "loans": {
+    "title": "கடன்கள் & EMI",
+    "addLoan": "கடன் சேர்",
+    "noLoans": "இன்னும் கடன்கள் இல்லை",
+    "emiSchedule": "EMI அட்டவணை",
+    "markPaid": "செலுத்தியதாக குறி",
+    "deleteLoan": "கடன் நீக்கு"
+  },
+  "insurance": {
+    "title": "காப்பீடு",
+    "addPolicy": "பாலிசி சேர்",
+    "noPolicies": "இன்னும் காப்பீடு பாலிசிகள் இல்லை",
+    "deletePolicy": "பாலிசி நீக்கு"
+  }
+}
