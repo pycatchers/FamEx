@@ -23,7 +23,7 @@ async def get_current_user(
         )
 
     token = authorization.removeprefix("Bearer ").strip()
-    payload = verify_supabase_jwt(token)
+    payload = await verify_supabase_jwt(token)
 
     supabase_uid: str | None = payload.get("sub")
     if not supabase_uid:
