@@ -61,6 +61,7 @@ export default function OCRBillScreen() {
         method: 'POST',
         body: { image_url: imageUri, language: 'en' },
       });
+      console.log('OCR Result:', ocrResult);
       setResult(ocrResult);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to process image');

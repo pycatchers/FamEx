@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+import logging
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 from app.dependencies import get_current_user
 from app.models.user import User
@@ -10,8 +11,12 @@ from app.integrations.gemini import (
     translate_text,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/v1/ai", tags=["ai"])
 
+
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/jpg", "image/png", "image/webp", "image/heic"}
 
 # ---------------------------------------------------------------------------
 # Bill OCR
@@ -41,15 +46,29 @@ class OCRBillResponse(BaseModel):
 
 @router.post("/ocr/bill", response_model=OCRBillResponse)
 async def ocr_bill(
-    data: OCRBillRequest,
+    file: UploadFile = File(...),
+    language: str = Form("en"),
     current_user: User = Depends(get_current_user),
 ):
     """Extract structured data from a shopping bill image using Gemini AI."""
     if not settings.GEMINI_API_KEY:
         raise HTTPException(status_code=503, detail="AI service not configured")
 
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.content_type}")
+
+    image_bytes = await file.read()
+    if not image_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
     try:
-        result = await extract_bill_data(data.image_url, data.language)
+        result = await extract_bill_data(
+            image_bytes=image_bytes,
+            image_mime_type=file.content_type,
+            language=language,
+        )
+        logger.debug("OCR bill result: %s", result)
+
         items = [
             OCRBillItem(
                 item_name=item.get("item_name", "Unknown"),
@@ -61,15 +80,17 @@ async def ocr_bill(
             )
             for item in result.get("items", [])
         ]
+        logger.debug("Parsed OCR bill items: %s", items)
+
         return OCRBillResponse(
             shop_name=result.get("shop_name"),
             bill_date=result.get("bill_date"),
             items=items,
             total_amount=result.get("total_amount"),
         )
-    except Exception as e:
-        return OCRBillResponse(raw_text=f"Extraction failed: {str(e)}")
-
+    except Exception:
+        logger.exception("OCR bill extraction failed")
+        return OCRBillResponse(raw_text="Extraction failed. Please try again with a clearer photo.")
 
 # ---------------------------------------------------------------------------
 # Prescription OCR

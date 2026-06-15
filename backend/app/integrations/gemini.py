@@ -1,40 +1,74 @@
 import base64
 import json
+import logging
 
 import httpx
 
 from app.config import settings
 
 
+logger = logging.getLogger(__name__)
+
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
 
-async def call_gemini(prompt: str, image_url: str | None = None) -> str:
-    """Call Gemini Flash API with text prompt and optional image URL."""
+def _clean_json_response(text: str) -> str:
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+        text = text.rsplit("```", 1)[0]
+    return text.strip()
+
+
+async def _fetch_remote_image(image_url: str) -> tuple[bytes, str]:
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(image_url, timeout=30.0)
+            resp.raise_for_status()
+        except httpx.RequestError as e:
+            logger.error("Error fetching image from %s: %s", image_url, e)
+            raise
+    return resp.content, resp.headers.get("content-type", "image/jpeg")
+
+
+async def call_gemini(
+    prompt: str,
+    image_bytes: bytes | None = None,
+    image_mime_type: str = "image/jpeg",
+    image_url: str | None = None,
+) -> str:
+    """Call Gemini Flash API with a text prompt and an optional image.
+
+    Pass `image_bytes` for images uploaded to this server (the normal case
+    for mobile apps). `image_url` is only for images already hosted at a
+    public http(s) URL — never a device-local `file://` path.
+    """
     if not settings.GEMINI_API_KEY:
         raise ValueError("GEMINI_API_KEY not configured")
 
     parts = [{"text": prompt}]
 
-    if image_url:
-        async with httpx.AsyncClient() as client:
-            img_response = await client.get(image_url, timeout=30.0)
-            img_response.raise_for_status()
-            img_data = base64.b64encode(img_response.content).decode("utf-8")
-            content_type = img_response.headers.get("content-type", "image/jpeg")
-            parts.insert(0, {
-                "inline_data": {
-                    "mime_type": content_type,
-                    "data": img_data,
-                }
-            })
+    if image_bytes is not None:
+        img_data = base64.b64encode(image_bytes).decode("utf-8")
+        parts.insert(0, {
+            "inline_data": {"mime_type": image_mime_type, "data": img_data}
+        })
+    elif image_url:
+        if not image_url.startswith(("http://", "https://")):
+            raise ValueError(
+                f"image_url '{image_url}' is not a fetchable http(s) URL. "
+                "Upload the file to the server and pass its bytes via "
+                "`image_bytes` instead."
+            )
+        content, content_type = await _fetch_remote_image(image_url)
+        img_data = base64.b64encode(content).decode("utf-8")
+        parts.insert(0, {
+            "inline_data": {"mime_type": content_type, "data": img_data}
+        })
 
     payload = {
         "contents": [{"parts": parts}],
-        "generationConfig": {
-            "temperature": 0.1,
-            "maxOutputTokens": 4096,
-        },
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 4096},
     }
 
     async with httpx.AsyncClient() as client:
@@ -53,8 +87,11 @@ async def call_gemini(prompt: str, image_url: str | None = None) -> str:
     return content_parts[0].get("text", "") if content_parts else ""
 
 
-async def extract_bill_data(image_url: str, language: str = "en") -> dict:
-    """Extract structured bill data from an image."""
+async def extract_bill_data(
+    image_bytes: bytes,
+    image_mime_type: str = "image/jpeg",
+    language: str = "en",
+) -> dict:
     lang_instruction = "The bill may be in Tamil." if language == "ta" else ""
     prompt = f"""Analyze this shopping bill/receipt image and extract structured data.
 {lang_instruction}
@@ -72,16 +109,15 @@ Return a valid JSON object with these fields:
 
 Return ONLY the JSON, no markdown, no explanation."""
 
-    text = await call_gemini(prompt, image_url)
-    text = text.strip()
-    if text.startswith("```"):
-        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
-        text = text.rsplit("```", 1)[0]
-    return json.loads(text)
+    text = await call_gemini(prompt, image_bytes=image_bytes, image_mime_type=image_mime_type)
+    return json.loads(_clean_json_response(text))
 
 
-async def extract_prescription_data(image_url: str, language: str = "en") -> dict:
-    """Extract structured prescription data from an image."""
+async def extract_prescription_data(
+    image_bytes: bytes,
+    image_mime_type: str = "image/jpeg",
+    language: str = "en",
+) -> dict:
     lang_instruction = "The prescription may be in Tamil." if language == "ta" else ""
     prompt = f"""Analyze this medical prescription image and extract structured data.
 {lang_instruction}
@@ -100,12 +136,8 @@ Return a valid JSON object with these fields:
 
 Return ONLY the JSON, no markdown, no explanation."""
 
-    text = await call_gemini(prompt, image_url)
-    text = text.strip()
-    if text.startswith("```"):
-        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
-        text = text.rsplit("```", 1)[0]
-    return json.loads(text)
+    text = await call_gemini(prompt, image_bytes=image_bytes, image_mime_type=image_mime_type)
+    return json.loads(_clean_json_response(text))
 
 
 async def extract_voice_to_items(text: str, language: str = "en") -> dict:
@@ -125,11 +157,7 @@ Return a valid JSON object with:
 Return ONLY the JSON, no markdown, no explanation."""
 
     result = await call_gemini(prompt)
-    result = result.strip()
-    if result.startswith("```"):
-        result = result.split("\n", 1)[1] if "\n" in result else result[3:]
-        result = result.rsplit("```", 1)[0]
-    return json.loads(result)
+    return json.loads(_clean_json_response(result))
 
 
 async def translate_text(text: str, source_lang: str, target_lang: str) -> str:

@@ -119,14 +119,15 @@ class AnalyticsService:
 
         # Monthly spending (last 6 months)
         six_months_ago = today - timedelta(days=180)
+        month_expr = func.to_char(ShoppingBill.bill_date, "YYYY-MM")
         monthly_result = await self.db.execute(
             select(
-                func.to_char(ShoppingBill.bill_date, "YYYY-MM").label("month"),
+                month_expr.label("month"),
                 func.sum(ShoppingBill.total_amount).label("total"),
             )
             .where(ShoppingBill.user_id == user_id, ShoppingBill.bill_date >= six_months_ago)
-            .group_by(func.to_char(ShoppingBill.bill_date, "YYYY-MM"))
-            .order_by(func.to_char(ShoppingBill.bill_date, "YYYY-MM"))
+            .group_by(month_expr)
+            .order_by(month_expr)
         )
         monthly_spending = [
             MonthlySpending(month=row.month, total=row.total or Decimal("0"))
@@ -174,7 +175,7 @@ class AnalyticsService:
             ItemFrequency(
                 item_name=row.item_name,
                 count=row.count,
-                avg_price=Decimal(str(round(row.avg_price, 2))),
+                avg_price=Decimal(str(round(row.avg_price, 2))) if row.avg_price is not None else Decimal("0"),
             )
             for row in item_result.all()
         ]
@@ -204,7 +205,6 @@ class AnalyticsService:
             total_this_month=total_this_month,
             total_last_month=total_last_month,
         )
-
 
 class ChecklistService:
     def __init__(self, db: AsyncSession):
