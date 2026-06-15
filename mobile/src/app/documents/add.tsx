@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@react-native-vector-icons/ionicons';
 import { useCreateDocument } from '@/hooks/queries/use-documents';
 import { DOCUMENT_TYPES } from '@/types/documents';
 

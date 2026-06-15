@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     DATABASE_URL: str = (
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/nestledger"
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/famex"
     )
     SUPABASE_URL: str = ""
     SUPABASE_ANON_KEY: str = ""

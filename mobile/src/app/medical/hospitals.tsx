@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@react-native-vector-icons/ionicons';
 import { useHospitals, useCreateHospital, useDeleteHospital } from '@/hooks/queries/use-medical';
 
 export default function HospitalsScreen() {

@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@react-native-vector-icons/ionicons';
 import { useTranslation } from 'react-i18next';
 import { useDashboard } from '@/hooks/queries/use-dashboard';
 import { useState } from 'react';

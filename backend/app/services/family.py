@@ -25,7 +25,11 @@ class FamilyService:
         return result.scalar_one_or_none()
 
     async def create_member(self, user_id: UUID, data: FamilyMemberCreate) -> FamilyMember:
-        member = FamilyMember(user_id=user_id, **data.model_dump(exclude_unset=True))
+        payload = data.model_dump(exclude_unset=True)
+        # schema uses `relationship`; model expects `relationship_type`
+        if "relationship" in payload:
+            payload["relationship_type"] = payload.pop("relationship")
+        member = FamilyMember(user_id=user_id, **payload)
         self.db.add(member)
         await self.db.flush()
         await self.db.refresh(member)
@@ -33,6 +37,8 @@ class FamilyService:
 
     async def update_member(self, member: FamilyMember, data: FamilyMemberUpdate) -> FamilyMember:
         update_data = data.model_dump(exclude_unset=True)
+        if "relationship" in update_data:
+            update_data["relationship_type"] = update_data.pop("relationship")
         for field, value in update_data.items():
             setattr(member, field, value)
         await self.db.flush()

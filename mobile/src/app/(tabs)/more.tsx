@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@react-native-vector-icons/ionicons';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/providers/auth-provider';
 import { useBiometric } from '@/hooks/use-biometric';
@@ -92,7 +92,7 @@ export default function MoreScreen() {
         </TouchableOpacity>
 
         <Text className="text-center text-gray-400 dark:text-gray-600 text-xs mt-6">
-          NestLedger v1.0.0
+          FamEx v1.0.0
         </Text>
       </View>
     </ScrollView>

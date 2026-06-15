@@ -26,7 +26,7 @@ export default function LoginScreen() {
   return (
     <View className="flex-1 justify-center px-6 bg-white dark:bg-gray-900">
       <Text className="text-3xl font-bold text-center mb-8 text-gray-900 dark:text-white">
-        NestLedger
+        FamEx
       </Text>
 
       <TextInput

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@react-native-vector-icons/ionicons';
 import { useSearch } from '@/hooks/queries/use-dashboard';
 
 export default function SearchScreen() {

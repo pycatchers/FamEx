@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, FlatList, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@react-native-vector-icons/ionicons';
 import { useDoctors, useCreateDoctor, useDeleteDoctor, useHospitals } from '@/hooks/queries/use-medical';
 import { Hospital } from '@/types/medical';
 

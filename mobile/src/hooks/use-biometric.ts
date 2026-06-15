@@ -42,7 +42,7 @@ export function useBiometric() {
   const authenticate = async (): Promise<boolean> => {
     if (!isEnabled) return true;
     const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Unlock NestLedger',
+      promptMessage: 'Unlock FamEx',
       fallbackLabel: 'Use passcode',
     });
     return result.success;

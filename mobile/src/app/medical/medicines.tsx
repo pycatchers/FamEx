@@ -1,5 +1,5 @@
 import { View, Text, FlatList, ActivityIndicator } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@react-native-vector-icons/ionicons';
 import { useActiveMedicines } from '@/hooks/queries/use-medical';
 
 export default function MedicinesScreen() {

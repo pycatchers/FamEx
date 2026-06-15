@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@react-native-vector-icons/ionicons';
 import { useDocuments } from '@/hooks/queries/use-documents';
 import { DOCUMENT_TYPES } from '@/types/documents';
 

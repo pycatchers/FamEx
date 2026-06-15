@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.backends.legacy:build"
 
 [project]
-name = "nestledger-backend"
+name = "famex-backend"
 version = "0.1.0"
-description = "NestLedger API backend"
+description = "FamEx API backend"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi==0.115.0",

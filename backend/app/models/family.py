@@ -11,7 +11,7 @@ class FamilyMember(BaseModel, Base):
 
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     full_name = Column(String(255), nullable=False)
-    relationship = Column(String(100), nullable=False)  # father, mother, spouse, child, sibling, etc.
+    relationship_type = Column(String(100), nullable=False)  # father, mother, spouse, child, sibling, etc.
     date_of_birth = Column(Date, nullable=True)
     gender = Column(String(20), nullable=True)  # male, female, other
     phone = Column(String(20), nullable=True)
@@ -24,3 +24,11 @@ class FamilyMember(BaseModel, Base):
 
     # Relationships
     documents = relationship("Document", back_populates="family_member", cascade="all, delete-orphan")
+
+    @property
+    def relationship(self) -> str:
+        return self.relationship_type
+
+    @relationship.setter
+    def relationship(self, value: str) -> None:
+        self.relationship_type = value

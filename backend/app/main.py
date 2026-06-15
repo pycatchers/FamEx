@@ -6,7 +6,7 @@ from app.middleware.rate_limit import RateLimitMiddleware
 from app.routers import auth, family, documents, loans, insurance, reminders, shopping, ai, medical, dashboard
 
 app = FastAPI(
-    title="NestLedger API",
+    title="FamEx API",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -53,4 +53,4 @@ async def health_check() -> dict[str, str]:
 
 @app.get("/", tags=["meta"])
 async def root() -> dict[str, str]:
-    return {"app": "NestLedger API", "version": "0.1.0"}
+    return {"app": "FamEx API", "version": "0.1.0"}

@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@react-native-vector-icons/ionicons';
 import { useInsurancePolicy, useDeleteInsurance } from '@/hooks/queries/use-insurance';
 
 export default function InsuranceDetailScreen() {

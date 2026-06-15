@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@react-native-vector-icons/ionicons';
 import { useBiometric } from '@/hooks/use-biometric';
 
 interface Props {
@@ -34,7 +34,7 @@ export function BiometricGate({ children }: Props) {
     return (
       <View className="flex-1 bg-gray-50 dark:bg-gray-900 justify-center items-center px-6">
         <Icon name="lock-closed" size={64} color="#2563eb" />
-        <Text className="text-xl font-bold text-gray-900 dark:text-white mt-6">NestLedger is Locked</Text>
+        <Text className="text-xl font-bold text-gray-900 dark:text-white mt-6">FamEx is Locked</Text>
         <Text className="text-gray-500 dark:text-gray-400 mt-2 text-center">
           Authenticate to access your data
         </Text>

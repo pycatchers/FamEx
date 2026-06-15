@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@react-native-vector-icons/ionicons';
 import { useCreatePrescription, useDoctors, useHospitals } from '@/hooks/queries/use-medical';
 import { MedicineCreate } from '@/types/medical';
 

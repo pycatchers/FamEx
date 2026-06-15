@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from '@react-native-vector-icons/ionicons';
 import { usePrescription, useDeletePrescription } from '@/hooks/queries/use-medical';
 
 export default function PrescriptionDetailScreen() {
