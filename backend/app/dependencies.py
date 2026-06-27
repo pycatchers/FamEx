@@ -16,6 +16,7 @@ async def get_current_user(
     ``sub`` claim (Supabase UID), then look up or auto-create the User
     row in the database.  Raises HTTP 401 on any auth failure.
     """
+    print("Authorization header:", authorization)
     if not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -9,8 +9,7 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
-
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 
 def _clean_json_response(text: str) -> str:
     text = text.strip()
@@ -73,7 +72,8 @@ async def call_gemini(
 
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            f"{GEMINI_API_URL}?key={settings.GEMINI_API_KEY}",
+            GEMINI_API_URL,
+            headers={"x-goog-api-key": settings.GEMINI_API_KEY},
             json=payload,
             timeout=60.0,
         )
@@ -97,6 +97,9 @@ async def extract_bill_data(
 {lang_instruction}
 Return a valid JSON object with these fields:
 - "shop_name": string or null
+- "shop_address": string or null (full address printed on the bill)
+- "shop_phone": string or null (phone number on the bill)
+- "shop_gstin": string or null (GST Identification Number, e.g. "29AABCT1332L1ZT")
 - "bill_date": string in "YYYY-MM-DD" format or null
 - "items": array of objects, each with:
   - "item_name": string
@@ -119,19 +122,27 @@ async def extract_prescription_data(
     language: str = "en",
 ) -> dict:
     lang_instruction = "The prescription may be in Tamil." if language == "ta" else ""
-    prompt = f"""Analyze this medical prescription image and extract structured data.
+    prompt = f"""Analyze this medical prescription or hospital bill image and extract structured data.
 {lang_instruction}
 Return a valid JSON object with these fields:
 - "doctor_name": string or null
+- "doctor_qualification": string or null (e.g. "MBBS, MD", "BDS", qualifications printed after the name)
+- "doctor_registration_id": string or null (registration/license number printed on prescription)
 - "hospital_name": string or null
+- "hospital_address": string or null (full address of the hospital/clinic)
+- "hospital_phone": string or null (phone number of the hospital/clinic)
 - "visit_date": string in "YYYY-MM-DD" format or null
 - "diagnosis": string or null
+- "reason_for_visit": string or null (chief complaint or reason for the visit)
 - "medicines": array of objects, each with:
   - "name": string
   - "dosage": string or null (e.g., "500mg")
   - "frequency": string or null (e.g., "twice daily")
   - "duration": string or null (e.g., "5 days")
-  - "timing": string or null (e.g., "after food")
+  - "timing": string or null ("before_food", "after_food", or "with_food")
+  - "morning": boolean
+  - "afternoon": boolean
+  - "night": boolean
 - "follow_up_date": string in "YYYY-MM-DD" format or null
 
 Return ONLY the JSON, no markdown, no explanation."""

@@ -5,6 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import Icon from '@react-native-vector-icons/ionicons';
 import { useCreateDocument } from '@/hooks/queries/use-documents';
 import { DOCUMENT_TYPES } from '@/types/documents';
+import DatePickerField from '@/components/date-picker-field';
 
 export default function AddDocumentScreen() {
   const router = useRouter();
@@ -118,23 +119,18 @@ export default function AddDocumentScreen() {
         />
 
         {/* Issue Date */}
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Issue Date</Text>
-        <TextInput
-          className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 mb-4 text-gray-900 dark:text-white bg-white dark:bg-gray-800"
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor="#9ca3af"
+        <DatePickerField
+          label="Issue Date"
           value={issueDate}
-          onChangeText={setIssueDate}
+          onChange={setIssueDate}
+          maximumDate={new Date()}
         />
 
         {/* Expiry Date */}
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expiry Date</Text>
-        <TextInput
-          className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 mb-4 text-gray-900 dark:text-white bg-white dark:bg-gray-800"
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor="#9ca3af"
+        <DatePickerField
+          label="Expiry Date"
           value={expiryDate}
-          onChangeText={setExpiryDate}
+          onChange={setExpiryDate}
         />
 
         {/* Image Upload */}

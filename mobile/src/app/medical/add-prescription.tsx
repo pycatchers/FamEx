@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import Icon from '@react-native-vector-icons/ionicons';
 import { useCreatePrescription, useDoctors, useHospitals } from '@/hooks/queries/use-medical';
 import { MedicineCreate } from '@/types/medical';
+import DatePickerField from '@/components/date-picker-field';
 
 export default function AddPrescriptionScreen() {
   const router = useRouter();
@@ -63,13 +64,11 @@ export default function AddPrescriptionScreen() {
         <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Add Prescription</Text>
 
         {/* Date */}
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</Text>
-        <TextInput
-          className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 mb-4 text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+        <DatePickerField
+          label="Date"
           value={prescriptionDate}
-          onChangeText={setPrescriptionDate}
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor="#9ca3af"
+          onChange={setPrescriptionDate}
+          maximumDate={new Date()}
         />
 
         {/* Diagnosis */}
@@ -107,13 +106,11 @@ export default function AddPrescriptionScreen() {
         )}
 
         {/* Follow-up Date */}
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Follow-up Date (optional)</Text>
-        <TextInput
-          className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 mb-4 text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+        <DatePickerField
+          label="Follow-up Date (optional)"
           value={followUpDate}
-          onChangeText={setFollowUpDate}
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor="#9ca3af"
+          onChange={setFollowUpDate}
+          minimumDate={new Date()}
         />
 
         {/* Medicines */}
@@ -145,6 +142,35 @@ export default function AddPrescriptionScreen() {
               value={med.dosage || ''}
               onChangeText={(v) => updateMedicine(index, 'dosage', v)}
             />
+            <View className="flex-row gap-2 mb-2">
+              <View className="flex-1">
+                <TextInput
+                  className="border border-gray-200 dark:border-gray-600 rounded px-3 py-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700"
+                  placeholder="Duration (days)"
+                  placeholderTextColor="#9ca3af"
+                  value={med.duration_days ? String(med.duration_days) : ''}
+                  onChangeText={(v) => updateMedicine(index, 'duration_days', parseInt(v) || null)}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+            <View className="flex-row gap-1 mb-2">
+              {[
+                { value: 'before_food', label: 'Before Food' },
+                { value: 'after_food', label: 'After Food' },
+                { value: 'with_food', label: 'With Food' },
+              ].map(t => (
+                <TouchableOpacity
+                  key={t.value}
+                  className={`flex-1 py-1.5 rounded ${med.timing === t.value ? 'bg-green-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                  onPress={() => updateMedicine(index, 'timing', med.timing === t.value ? null : t.value)}
+                >
+                  <Text className={`text-center text-xs ${med.timing === t.value ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`}>
+                    {t.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             <View className="flex-row gap-2">
               {(['morning', 'afternoon', 'night'] as const).map(slot => (
                 <TouchableOpacity

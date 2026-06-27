@@ -11,8 +11,10 @@ class Doctor(BaseModel, Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     hospital_id = Column(UUID(as_uuid=True), ForeignKey("hospitals.id"), nullable=True, index=True)
     name = Column(String(255), nullable=False)
+    qualification = Column(String(200), nullable=True)  # e.g. "MBBS, MD"
     specialization = Column(String(100), nullable=True)
     phone = Column(String(20), nullable=True)
+    registration_id = Column(String(100), nullable=True)
     notes = Column(Text, nullable=True)
 
     # Relationships

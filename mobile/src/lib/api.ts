@@ -1,3 +1,4 @@
+import { File, UploadType } from 'expo-file-system';
 import { supabase } from './supabase';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
@@ -30,4 +31,38 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
   }
 
   return response.json();
+}
+
+
+export async function apiUploadFile<T>(
+  endpoint: string,
+  file: { uri: string; name: string; type: string },
+  fields?: Record<string, string>,
+): Promise<T> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+
+  const srcFile = new File(file.uri);
+
+  const result = await srcFile.upload(`${API_URL}${endpoint}`, {
+    uploadType: UploadType.MULTIPART,
+    fieldName: 'file',
+    mimeType: file.type,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    parameters: fields, // additional form fields, sent alongside the file
+  });
+
+  if (result.status < 200 || result.status >= 300) {
+    let detail = 'Upload failed';
+    try {
+      detail = JSON.parse(result.body)?.detail ?? detail;
+    } catch {
+      // body wasn't JSON
+    }
+    throw new Error(`${detail} (HTTP ${result.status})`);
+  }
+
+  return JSON.parse(result.body) as T;
 }

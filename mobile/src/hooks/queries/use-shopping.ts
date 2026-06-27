@@ -1,6 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
-import { Shop, ShopCreate, ShoppingBill, BillCreate, ShoppingChecklist, ShoppingAnalytics } from '@/types/shopping';
+import { Shop, ShopCreate, RecentShop, ShoppingBill, BillCreate, ShoppingChecklist, ShoppingAnalytics, ItemPriceComparison } from '@/types/shopping';
+
+// Recent Shops (main Shopping tab)
+export function useRecentShops() {
+  return useQuery({
+    queryKey: ['shops', 'recent'],
+    queryFn: () => apiClient<RecentShop[]>('/api/v1/shopping/shops/recent'),
+  });
+}
 
 // Shops
 export function useShops() {
@@ -119,5 +127,36 @@ export function useDeleteChecklist() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['checklists'] });
     },
+  });
+}
+
+export function useAddChecklistItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ checklistId, item_name, quantity }: { checklistId: string; item_name: string; quantity?: string }) =>
+      apiClient(`/api/v1/shopping/checklists/${checklistId}/items`, { method: 'POST', body: { item_name, quantity } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['checklists'] });
+    },
+  });
+}
+
+export function useDeleteChecklistItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ checklistId, itemId }: { checklistId: string; itemId: string }) =>
+      apiClient(`/api/v1/shopping/checklists/${checklistId}/items/${itemId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['checklists'] });
+    },
+  });
+}
+
+// Item Price Comparison
+export function useItemPriceComparison(itemName: string) {
+  return useQuery({
+    queryKey: ['item-prices', itemName],
+    queryFn: () => apiClient<ItemPriceComparison[]>(`/api/v1/shopping/items/${encodeURIComponent(itemName)}/prices`),
+    enabled: !!itemName && itemName.length >= 2,
   });
 }

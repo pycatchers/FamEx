@@ -38,6 +38,9 @@ class OCRBillItem(BaseModel):
 
 class OCRBillResponse(BaseModel):
     shop_name: str | None = None
+    shop_address: str | None = None
+    shop_phone: str | None = None
+    shop_gstin: str | None = None
     bill_date: str | None = None
     items: list[OCRBillItem] = []
     total_amount: float | None = None
@@ -80,10 +83,12 @@ async def ocr_bill(
             )
             for item in result.get("items", [])
         ]
-        logger.debug("Parsed OCR bill items: %s", items)
 
         return OCRBillResponse(
             shop_name=result.get("shop_name"),
+            shop_address=result.get("shop_address"),
+            shop_phone=result.get("shop_phone"),
+            shop_gstin=result.get("shop_gstin"),
             bill_date=result.get("bill_date"),
             items=items,
             total_amount=result.get("total_amount"),
@@ -106,50 +111,92 @@ class OCRMedicine(BaseModel):
     dosage: str | None = None
     frequency: str | None = None
     duration: str | None = None
-    timing: str | None = None
+    timing: str | None = None  # "before_food" | "after_food" | "with_food"
+    morning: bool = False
+    afternoon: bool = False
+    night: bool = False
 
 
 class OCRPrescriptionResponse(BaseModel):
     doctor_name: str | None = None
+    doctor_qualification: str | None = None
+    doctor_registration_id: str | None = None
     hospital_name: str | None = None
+    hospital_address: str | None = None
+    hospital_phone: str | None = None
     visit_date: str | None = None
     diagnosis: str | None = None
+    reason_for_visit: str | None = None
     medicines: list[OCRMedicine] = []
     follow_up_date: str | None = None
     raw_text: str | None = None
 
 
+def _parse_timing(raw: str | None) -> str | None:
+    if not raw:
+        return None
+    r = raw.lower()
+    if "before" in r:
+        return "before_food"
+    if "with" in r:
+        return "with_food"
+    if "after" in r:
+        return "after_food"
+    return None
+
+
 @router.post("/ocr/prescription", response_model=OCRPrescriptionResponse)
 async def ocr_prescription(
-    data: OCRPrescriptionRequest,
+    file: UploadFile = File(...),
+    language: str = Form("en"),
     current_user: User = Depends(get_current_user),
 ):
     """Extract structured data from a prescription image using Gemini AI."""
     if not settings.GEMINI_API_KEY:
         raise HTTPException(status_code=503, detail="AI service not configured")
 
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.content_type}")
+
+    image_bytes = await file.read()
+    if not image_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
     try:
-        result = await extract_prescription_data(data.image_url, data.language)
+        result = await extract_prescription_data(
+            image_bytes=image_bytes,
+            image_mime_type=file.content_type,
+            language=language,
+        )
         medicines = [
             OCRMedicine(
                 name=med.get("name", "Unknown"),
                 dosage=med.get("dosage"),
                 frequency=med.get("frequency"),
                 duration=med.get("duration"),
-                timing=med.get("timing"),
+                timing=_parse_timing(med.get("timing")),
+                morning=bool(med.get("morning", False)),
+                afternoon=bool(med.get("afternoon", False)),
+                night=bool(med.get("night", False)),
             )
             for med in result.get("medicines", [])
         ]
         return OCRPrescriptionResponse(
             doctor_name=result.get("doctor_name"),
+            doctor_qualification=result.get("doctor_qualification"),
+            doctor_registration_id=result.get("doctor_registration_id"),
             hospital_name=result.get("hospital_name"),
+            hospital_address=result.get("hospital_address"),
+            hospital_phone=result.get("hospital_phone"),
             visit_date=result.get("visit_date"),
             diagnosis=result.get("diagnosis"),
+            reason_for_visit=result.get("reason_for_visit"),
             medicines=medicines,
             follow_up_date=result.get("follow_up_date"),
         )
-    except Exception as e:
-        return OCRPrescriptionResponse(raw_text=f"Extraction failed: {str(e)}")
+    except Exception:
+        logger.exception("OCR prescription extraction failed")
+        return OCRPrescriptionResponse(raw_text="Extraction failed. Please try again with a clearer photo.")
 
 
 # ---------------------------------------------------------------------------

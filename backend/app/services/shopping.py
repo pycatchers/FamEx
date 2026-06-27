@@ -12,6 +12,7 @@ from app.schemas.shopping import (
     ShopCreate, ShopUpdate, BillCreate, BillUpdate,
     ChecklistCreate, ChecklistUpdate, ChecklistItemCreate,
     MonthlySpending, ShopSpending, ItemFrequency, ShoppingAnalytics,
+    RecentShopResponse,
 )
 
 
@@ -48,6 +49,68 @@ class ShopService:
     async def delete_shop(self, shop: Shop) -> None:
         await self.db.delete(shop)
         await self.db.flush()
+
+    async def find_or_create_by_name(self, user_id: UUID, name: str, address: str | None, phone: str | None, gstin: str | None) -> Shop:
+        """Find an existing shop by name (case-insensitive) or create a new one."""
+        result = await self.db.execute(
+            select(Shop).where(
+                Shop.user_id == user_id,
+                func.lower(Shop.name) == name.lower(),
+            )
+        )
+        shop = result.scalar_one_or_none()
+        if shop is None:
+            shop = Shop(user_id=user_id, name=name, address=address, phone=phone, gstin=gstin)
+            self.db.add(shop)
+            await self.db.flush()
+            await self.db.refresh(shop)
+        else:
+            updated = False
+            if address and not shop.address:
+                shop.address = address
+                updated = True
+            if phone and not shop.phone:
+                shop.phone = phone
+                updated = True
+            if gstin and not shop.gstin:
+                shop.gstin = gstin
+                updated = True
+            if updated:
+                await self.db.flush()
+                await self.db.refresh(shop)
+        return shop
+
+    async def get_recent_shops(self, user_id: UUID) -> list[RecentShopResponse]:
+        """Return shops ordered by most recent bill date with spend totals."""
+        result = await self.db.execute(
+            select(
+                Shop.id,
+                Shop.name,
+                Shop.address,
+                Shop.phone,
+                Shop.gstin,
+                func.max(ShoppingBill.bill_date).label("last_visit_date"),
+                func.count(ShoppingBill.id).label("bill_count"),
+                func.sum(ShoppingBill.total_amount).label("total_spent"),
+            )
+            .join(ShoppingBill, ShoppingBill.shop_id == Shop.id)
+            .where(Shop.user_id == user_id)
+            .group_by(Shop.id, Shop.name, Shop.address, Shop.phone, Shop.gstin)
+            .order_by(func.max(ShoppingBill.bill_date).desc())
+        )
+        return [
+            RecentShopResponse(
+                id=row.id,
+                name=row.name,
+                address=row.address,
+                phone=row.phone,
+                gstin=row.gstin,
+                last_visit_date=row.last_visit_date,
+                bill_count=row.bill_count,
+                total_spent=row.total_spent or Decimal("0"),
+            )
+            for row in result.all()
+        ]
 
 
 class BillService:
@@ -106,6 +169,57 @@ class BillService:
     async def delete_bill(self, bill: ShoppingBill) -> None:
         await self.db.delete(bill)
         await self.db.flush()
+
+    async def get_item_price_comparison(self, user_id: UUID, item_name: str) -> list[dict]:
+        """Get price comparison for an item across shops."""
+        from sqlalchemy import func
+
+        result = await self.db.execute(
+            select(
+                Shop.id.label("shop_id"),
+                Shop.name.label("shop_name"),
+                func.min(PurchaseItem.bought_price).label("min_price"),
+                func.max(PurchaseItem.bought_price).label("max_price"),
+                func.avg(PurchaseItem.bought_price).label("avg_price"),
+                func.max(ShoppingBill.bill_date).label("last_bought_date"),
+            )
+            .join(ShoppingBill, PurchaseItem.bill_id == ShoppingBill.id)
+            .join(Shop, ShoppingBill.shop_id == Shop.id)
+            .where(
+                ShoppingBill.user_id == user_id,
+                func.lower(PurchaseItem.item_name).contains(item_name.lower()),
+            )
+            .group_by(Shop.id, Shop.name)
+            .order_by(func.avg(PurchaseItem.bought_price).asc())
+        )
+        rows = result.all()
+
+        comparison = []
+        for row in rows:
+            # Get last price
+            last_price_result = await self.db.execute(
+                select(PurchaseItem.bought_price)
+                .join(ShoppingBill, PurchaseItem.bill_id == ShoppingBill.id)
+                .where(
+                    ShoppingBill.user_id == user_id,
+                    ShoppingBill.shop_id == row.shop_id,
+                    func.lower(PurchaseItem.item_name).contains(item_name.lower()),
+                )
+                .order_by(ShoppingBill.bill_date.desc())
+                .limit(1)
+            )
+            last_price = last_price_result.scalar() or row.avg_price
+
+            comparison.append({
+                "shop_id": row.shop_id,
+                "shop_name": row.shop_name,
+                "min_price": row.min_price,
+                "max_price": row.max_price,
+                "avg_price": round(row.avg_price, 2),
+                "last_bought_date": row.last_bought_date,
+                "last_price": last_price,
+            })
+        return comparison
 
 
 class AnalyticsService:

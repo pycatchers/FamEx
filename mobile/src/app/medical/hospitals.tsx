@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import { useHospitals, useCreateHospital, useDeleteHospital } from '@/hooks/queries/use-medical';
+import { useHospitalDetails, useCreateHospital, useDeleteHospital } from '@/hooks/queries/use-medical';
 
 export default function HospitalsScreen() {
-  const { data: hospitals, isLoading } = useHospitals();
+  const { data: hospitals, isLoading } = useHospitalDetails();
   const createHospital = useCreateHospital();
   const deleteHospital = useDeleteHospital();
   const [showAdd, setShowAdd] = useState(false);
@@ -98,6 +98,17 @@ export default function HospitalsScreen() {
                 {item.address && (
                   <Text className="text-gray-500 dark:text-gray-400 text-sm" numberOfLines={1}>{item.address}</Text>
                 )}
+                <View className="flex-row mt-1">
+                  {item.last_visit_date && (
+                    <Text className="text-gray-400 text-xs mr-3">Last visit: {item.last_visit_date}</Text>
+                  )}
+                  {item.visit_count > 0 && (
+                    <Text className="text-gray-400 text-xs mr-3">{item.visit_count} visits</Text>
+                  )}
+                  {item.doctors && item.doctors.length > 0 && (
+                    <Text className="text-gray-400 text-xs">{item.doctors.length} doctors</Text>
+                  )}
+                </View>
               </View>
               <TouchableOpacity className="p-1" onPress={() => handleDelete(item.id, item.name)}>
                 <Icon name="trash-outline" size={18} color="#ef4444" />

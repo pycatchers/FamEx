@@ -43,16 +43,20 @@ class HospitalResponse(BaseModel):
 class DoctorCreate(BaseModel):
     hospital_id: Optional[UUID] = None
     name: str
+    qualification: Optional[str] = None
     specialization: Optional[str] = None
     phone: Optional[str] = None
+    registration_id: Optional[str] = None
     notes: Optional[str] = None
 
 
 class DoctorUpdate(BaseModel):
     hospital_id: Optional[UUID] = None
     name: Optional[str] = None
+    qualification: Optional[str] = None
     specialization: Optional[str] = None
     phone: Optional[str] = None
+    registration_id: Optional[str] = None
     notes: Optional[str] = None
 
 
@@ -61,8 +65,10 @@ class DoctorResponse(BaseModel):
     user_id: UUID
     hospital_id: Optional[UUID] = None
     name: str
+    qualification: Optional[str] = None
     specialization: Optional[str] = None
     phone: Optional[str] = None
+    registration_id: Optional[str] = None
     notes: Optional[str] = None
     created_at: datetime
     updated_at: datetime
@@ -111,6 +117,7 @@ class PrescriptionCreate(BaseModel):
     hospital_id: Optional[UUID] = None
     prescription_date: date
     diagnosis: Optional[str] = None
+    reason_for_visit: Optional[str] = None
     image_url: Optional[str] = None
     follow_up_date: Optional[date] = None
     notes: Optional[str] = None
@@ -123,6 +130,7 @@ class PrescriptionUpdate(BaseModel):
     hospital_id: Optional[UUID] = None
     prescription_date: Optional[date] = None
     diagnosis: Optional[str] = None
+    reason_for_visit: Optional[str] = None
     image_url: Optional[str] = None
     follow_up_date: Optional[date] = None
     notes: Optional[str] = None
@@ -136,6 +144,7 @@ class PrescriptionResponse(BaseModel):
     hospital_id: Optional[UUID] = None
     prescription_date: date
     diagnosis: Optional[str] = None
+    reason_for_visit: Optional[str] = None
     image_url: Optional[str] = None
     follow_up_date: Optional[date] = None
     notes: Optional[str] = None
@@ -144,6 +153,35 @@ class PrescriptionResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# --- Detail Responses ---
+class HospitalDetailResponse(HospitalResponse):
+    last_visit_date: Optional[date] = None
+    visit_count: int = 0
+    doctors: list[DoctorResponse] = []
+
+
+class DoctorDetailResponse(DoctorResponse):
+    last_visit_date: Optional[date] = None
+    visit_count: int = 0
+
+
+# --- Visit Summary (for the Medical tab list) ---
+class VisitSummary(BaseModel):
+    prescription_id: UUID
+    hospital_id: Optional[UUID] = None
+    hospital_name: Optional[str] = None
+    hospital_address: Optional[str] = None
+    hospital_phone: Optional[str] = None
+    visit_date: date
+    patient_name: Optional[str] = None
+    reason_for_visit: Optional[str] = None
+    diagnosis: Optional[str] = None
+    doctor_name: Optional[str] = None
+    doctor_qualification: Optional[str] = None
+    doctor_registration_id: Optional[str] = None
+    medicines: list["MedicineResponse"] = []
 
 
 # --- Active Medicines ---

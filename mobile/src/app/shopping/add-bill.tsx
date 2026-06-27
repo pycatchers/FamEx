@@ -1,19 +1,24 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import Icon from '@react-native-vector-icons/ionicons';
-import { useCreateBill, useShops } from '@/hooks/queries/use-shopping';
+import { useCreateBill, useShops, useItemPriceComparison, useCreateShop } from '@/hooks/queries/use-shopping';
 import { PurchaseItemCreate } from '@/types/shopping';
+import DatePickerField from '@/components/date-picker-field';
 
 export default function AddBillScreen() {
   const router = useRouter();
   const createBill = useCreateBill();
+  const createShop = useCreateShop();
   const { data: shops } = useShops();
 
+  const [newShopName, setNewShopName] = useState('');
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
   const [billDate, setBillDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [items, setItems] = useState<PurchaseItemCreate[]>([{ item_name: '', bought_price: 0 }]);
+  const [compareItemName, setCompareItemName] = useState('');
+  const { data: priceComparison, isLoading: pricesLoading } = useItemPriceComparison(compareItemName);
 
   const addItem = () => {
     setItems([...items, { item_name: '', bought_price: 0 }]);
@@ -44,8 +49,14 @@ export default function AddBillScreen() {
     }
 
     try {
+      let shopId = selectedShopId;
+      // If user typed a new shop name, create (or find) it first
+      if (newShopName.trim()) {
+        const shop = await createShop.mutateAsync({ name: newShopName.trim() });
+        shopId = shop.id;
+      }
       await createBill.mutateAsync({
-        shop_id: selectedShopId,
+        shop_id: shopId,
         bill_date: billDate,
         total_amount: totalAmount,
         payment_method: paymentMethod,
@@ -65,34 +76,49 @@ export default function AddBillScreen() {
 
         {/* Shop Selection */}
         <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Shop</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
-          <TouchableOpacity
-            className={`mr-2 px-3 py-2 rounded-full ${!selectedShopId ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-            onPress={() => setSelectedShopId(null)}
-          >
-            <Text className={`text-sm ${!selectedShopId ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>None</Text>
-          </TouchableOpacity>
-          {shops?.map((shop) => (
-            <TouchableOpacity
-              key={shop.id}
-              className={`mr-2 px-3 py-2 rounded-full ${selectedShopId === shop.id ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-              onPress={() => setSelectedShopId(shop.id)}
-            >
-              <Text className={`text-sm ${selectedShopId === shop.id ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>
-                {shop.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        {/* New shop text input */}
+        <TextInput
+          className="border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-gray-900 dark:text-white bg-white dark:bg-gray-800 mb-2"
+          placeholder="Type new shop name…"
+          placeholderTextColor="#9ca3af"
+          value={newShopName}
+          onChangeText={(v) => {
+            setNewShopName(v);
+            if (v) setSelectedShopId(null); // clear chip selection
+          }}
+        />
+        {/* Or pick existing */}
+        {(shops?.length ?? 0) > 0 && (
+          <>
+            <Text className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">or select existing</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
+              <TouchableOpacity
+                className={`mr-2 px-3 py-2 rounded-full ${!selectedShopId && !newShopName ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                onPress={() => { setSelectedShopId(null); setNewShopName(''); }}
+              >
+                <Text className={`text-sm ${!selectedShopId && !newShopName ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>None</Text>
+              </TouchableOpacity>
+              {shops?.map((shop) => (
+                <TouchableOpacity
+                  key={shop.id}
+                  className={`mr-2 px-3 py-2 rounded-full ${selectedShopId === shop.id ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                  onPress={() => { setSelectedShopId(shop.id); setNewShopName(''); }}
+                >
+                  <Text className={`text-sm ${selectedShopId === shop.id ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                    {shop.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        )}
 
         {/* Date */}
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</Text>
-        <TextInput
-          className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 mb-4 text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+        <DatePickerField
+          label="Date"
           value={billDate}
-          onChangeText={setBillDate}
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor="#9ca3af"
+          onChange={setBillDate}
+          maximumDate={new Date()}
         />
 
         {/* Payment Method */}
@@ -119,7 +145,7 @@ export default function AddBillScreen() {
 
         {items.map((item, index) => (
           <View key={index} className="bg-white dark:bg-gray-800 rounded-lg p-3 mb-2 border border-gray-200 dark:border-gray-700">
-            <View className="flex-row items-center">
+            <View className="flex-row items-center mb-2">
               <View className="flex-1 mr-2">
                 <TextInput
                   className="border border-gray-200 dark:border-gray-600 rounded px-3 py-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700"
@@ -127,9 +153,40 @@ export default function AddBillScreen() {
                   placeholderTextColor="#9ca3af"
                   value={item.item_name}
                   onChangeText={(v) => updateItem(index, 'item_name', v)}
+                  onBlur={() => {
+                    if (item.item_name.trim().length >= 2) {
+                      setCompareItemName(item.item_name.trim());
+                    }
+                  }}
                 />
               </View>
-              <View className="w-24 mr-2">
+              <TouchableOpacity onPress={() => removeItem(index)}>
+                <Icon name="close-circle" size={22} color="#ef4444" />
+              </TouchableOpacity>
+            </View>
+            <View className="flex-row items-center gap-2">
+              <View className="w-16">
+                <TextInput
+                  className="border border-gray-200 dark:border-gray-600 rounded px-3 py-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700"
+                  placeholder="Qty"
+                  placeholderTextColor="#9ca3af"
+                  value={item.quantity ? String(item.quantity) : ''}
+                  onChangeText={(v) => updateItem(index, 'quantity', v)}
+                  keyboardType="numeric"
+                />
+              </View>
+              <View className="flex-row flex-1">
+                {['kg', 'L', 'pcs', 'pack'].map((u) => (
+                  <TouchableOpacity
+                    key={u}
+                    className={`px-2 py-1.5 rounded mr-1 ${item.unit === u ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                    onPress={() => updateItem(index, 'unit', u)}
+                  >
+                    <Text className={`text-xs ${item.unit === u ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`}>{u}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View className="w-24">
                 <TextInput
                   className="border border-gray-200 dark:border-gray-600 rounded px-3 py-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700"
                   placeholder="₹ Price"
@@ -139,12 +196,45 @@ export default function AddBillScreen() {
                   keyboardType="numeric"
                 />
               </View>
-              <TouchableOpacity onPress={() => removeItem(index)}>
-                <Icon name="close-circle" size={22} color="#ef4444" />
-              </TouchableOpacity>
             </View>
           </View>
         ))}
+
+        {/* Price Comparison */}
+        {compareItemName.length >= 2 && (
+          <View className="bg-white dark:bg-gray-800 rounded-lg p-3 mb-3 border border-gray-200 dark:border-gray-700">
+            <View className="flex-row items-center justify-between mb-2">
+              <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Price History: "{compareItemName}"
+              </Text>
+              <TouchableOpacity onPress={() => setCompareItemName('')}>
+                <Icon name="close" size={18} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+            {pricesLoading ? (
+              <ActivityIndicator size="small" color="#2563eb" />
+            ) : priceComparison && priceComparison.length > 0 ? (
+              priceComparison.map((pc) => (
+                <View key={pc.shop_id} className="flex-row items-center py-1.5 border-t border-gray-100 dark:border-gray-700">
+                  <View className="flex-1">
+                    <Text className="text-gray-900 dark:text-white text-sm">{pc.shop_name}</Text>
+                    <Text className="text-gray-400 text-xs">
+                      Last: {pc.last_bought_date || 'N/A'}
+                    </Text>
+                  </View>
+                  <View className="items-end">
+                    <Text className="text-gray-900 dark:text-white text-sm font-medium">₹{pc.last_price}</Text>
+                    <Text className="text-gray-400 text-xs">
+                      Avg: ₹{pc.avg_price} · Min: ₹{pc.min_price}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            ) : (
+              <Text className="text-gray-400 text-sm text-center py-2">No price history found</Text>
+            )}
+          </View>
+        )}
 
         {/* Total */}
         <View className="bg-primary-50 dark:bg-primary-900/20 rounded-lg p-4 my-4">

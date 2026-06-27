@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, TextInput, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Icon from '@react-native-vector-icons/ionicons';
 import { useSearch } from '@/hooks/queries/use-dashboard';
@@ -60,7 +61,7 @@ export default function SearchScreen() {
   };
 
   return (
-    <View className="flex-1 bg-gray-50 dark:bg-gray-900">
+    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
       {/* Search Input */}
       <View className="bg-white dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
         <View className="flex-row items-center bg-gray-100 dark:bg-gray-700 rounded-xl px-4 py-3">
@@ -132,6 +133,6 @@ export default function SearchScreen() {
           )}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }

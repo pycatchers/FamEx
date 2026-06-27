@@ -14,6 +14,7 @@ class Prescription(BaseModel, Base):
     hospital_id = Column(UUID(as_uuid=True), ForeignKey("hospitals.id"), nullable=True, index=True)
     prescription_date = Column(Date, nullable=False)
     diagnosis = Column(Text, nullable=True)
+    reason_for_visit = Column(Text, nullable=True)
     image_url = Column(String(500), nullable=True)
     follow_up_date = Column(Date, nullable=True)
     notes = Column(Text, nullable=True)

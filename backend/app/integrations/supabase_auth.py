@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 import httpx
@@ -5,6 +6,8 @@ from fastapi import HTTPException, status
 from jose import ExpiredSignatureError, JWTError, jwt
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 _jwks_cache: dict[str, Any] | None = None
 
@@ -78,9 +81,11 @@ async def verify_supabase_jwt(token: str) -> dict[str, Any]:
             detail="JWT verification is not configured",
         )
 
+    alg = "unknown"
     try:
         unverified_header = jwt.get_unverified_header(token)
         alg = unverified_header.get("alg", "HS256")
+        logger.info("JWT alg=%s kid=%s", alg, unverified_header.get("kid"))
 
         if alg == "HS256" and settings.SUPABASE_JWT_SECRET:
             payload = _verify_with_secret(token)
@@ -90,16 +95,19 @@ async def verify_supabase_jwt(token: str) -> dict[str, Any]:
 
         return payload
     except ExpiredSignatureError:
+        logger.warning("JWT expired (alg=%s)", alg)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired",
         )
     except JWTError as exc:
+        logger.error("JWT validation failed (alg=%s): %s", alg, exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Could not validate token: {exc}",
         )
     except httpx.HTTPError as exc:
+        logger.error("JWKS fetch failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Failed to fetch JWKS: {exc}",

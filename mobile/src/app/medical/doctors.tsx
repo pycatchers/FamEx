@@ -36,6 +36,7 @@ export default function DoctorsScreen() {
   const [specialization, setSpecialization] = useState('');
   const [phone, setPhone] = useState('');
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null);
+  const [registrationId, setRegistrationId] = useState('');
 
   const handleAdd = async () => {
     if (!name.trim()) return;
@@ -44,10 +45,12 @@ export default function DoctorsScreen() {
       specialization: specialization.trim() || null,
       phone: phone.trim() || null,
       hospital_id: selectedHospitalId,
+      registration_id: registrationId.trim() || null,
     });
     setName('');
     setSpecialization('');
     setPhone('');
+    setRegistrationId('');
     setSelectedHospitalId(null);
     setShowAdd(false);
   };
@@ -94,6 +97,13 @@ export default function DoctorsScreen() {
             onChangeText={setPhone}
             keyboardType="phone-pad"
           />
+          <TextInput
+            className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 mb-2 text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+            placeholder="Registration ID"
+            placeholderTextColor="#9ca3af"
+            value={registrationId}
+            onChangeText={setRegistrationId}
+          />
           {hospitals && hospitals.length > 0 && (
             <>
               <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1">Hospital</Text>
@@ -130,6 +140,9 @@ export default function DoctorsScreen() {
                 <Text className="text-gray-900 dark:text-white font-semibold">{item.name}</Text>
                 {item.specialization && (
                   <Text className="text-gray-500 dark:text-gray-400 text-sm">{item.specialization}</Text>
+                )}
+                {item.registration_id && (
+                  <Text className="text-gray-400 text-xs">Reg: {item.registration_id}</Text>
                 )}
               </View>
               <TouchableOpacity className="p-1" onPress={() => handleDelete(item.id, item.name)}>

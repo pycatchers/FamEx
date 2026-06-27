@@ -6,11 +6,23 @@ export interface Shop {
   latitude: number | null;
   longitude: number | null;
   phone: string | null;
+  gstin: string | null;
   category: string | null;
   is_favorite: boolean;
   notes: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface RecentShop {
+  id: string;
+  name: string;
+  address: string | null;
+  phone: string | null;
+  gstin: string | null;
+  last_visit_date: string | null;
+  bill_count: number;
+  total_spent: number;
 }
 
 export interface ShopCreate {
@@ -19,6 +31,7 @@ export interface ShopCreate {
   latitude?: number | null;
   longitude?: number | null;
   phone?: string | null;
+  gstin?: string | null;
   category?: string | null;
   is_favorite?: boolean;
   notes?: string | null;
@@ -105,6 +118,37 @@ export interface ShoppingAnalytics {
   top_items: { item_name: string; count: number; avg_price: number }[];
   total_this_month: number;
   total_last_month: number;
+}
+
+export interface ItemPriceComparison {
+  shop_name: string;
+  shop_id: string;
+  min_price: number;
+  max_price: number;
+  avg_price: number;
+  last_bought_date: string;
+  last_price: number;
+}
+
+// OCR extraction result (before saving)
+export interface OCRBillItem {
+  item_name: string;
+  quantity: number | null;
+  unit: string | null;
+  mrp: number | null;
+  discount: number | null;
+  bought_price: number;
+}
+
+export interface OCRBillResult {
+  shop_name: string | null;
+  shop_address: string | null;
+  shop_phone: string | null;
+  shop_gstin: string | null;
+  bill_date: string | null;
+  items: OCRBillItem[];
+  total_amount: number | null;
+  raw_text: string | null;
 }
 
 export const SHOP_CATEGORIES = [

@@ -3,8 +3,9 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'reac
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Icon from '@react-native-vector-icons/ionicons';
 import { useCreateFamilyMember, useUpdateFamilyMember, useFamilyMember } from '@/hooks/queries/use-family';
+import DatePickerField from '@/components/date-picker-field';
 
-const RELATIONSHIPS = ['Father', 'Mother', 'Spouse', 'Son', 'Daughter', 'Brother', 'Sister', 'Grandfather', 'Grandmother', 'Other'];
+const RELATIONSHIPS = ['Self', 'Father', 'Mother', 'Spouse', 'Son', 'Daughter', 'Brother', 'Sister', 'Grandfather', 'Grandmother', 'Other'];
 const GENDERS = ['Male', 'Female', 'Other'];
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -49,7 +50,11 @@ export default function AddFamilyMemberScreen() {
       } else {
         await createMutation.mutateAsync(data);
       }
-      router.back();
+      if (isEditing) {
+        router.back();
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (error: any) {
       Alert.alert('Error', error.message);
     }
@@ -127,13 +132,12 @@ export default function AddFamilyMemberScreen() {
         </View>
 
         {/* Date of Birth */}
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date of Birth</Text>
-        <TextInput
-          className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 mb-4 text-gray-900 dark:text-white bg-white dark:bg-gray-800"
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor="#9ca3af"
+        <DatePickerField
+          label="Date of Birth"
           value={dateOfBirth}
-          onChangeText={setDateOfBirth}
+          onChange={setDateOfBirth}
+          placeholder="Select date of birth"
+          maximumDate={new Date()}
         />
 
         {/* Phone */}

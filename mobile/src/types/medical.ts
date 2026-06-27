@@ -25,8 +25,10 @@ export interface Doctor {
   user_id: string;
   hospital_id: string | null;
   name: string;
+  qualification: string | null;
   specialization: string | null;
   phone: string | null;
+  registration_id: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -37,6 +39,7 @@ export interface DoctorCreate {
   name: string;
   specialization?: string | null;
   phone?: string | null;
+  registration_id?: string | null;
   notes?: string | null;
 }
 
@@ -79,6 +82,7 @@ export interface Prescription {
   hospital_id: string | null;
   prescription_date: string;
   diagnosis: string | null;
+  reason_for_visit: string | null;
   image_url: string | null;
   follow_up_date: string | null;
   notes: string | null;
@@ -93,6 +97,7 @@ export interface PrescriptionCreate {
   hospital_id?: string | null;
   prescription_date: string;
   diagnosis?: string | null;
+  reason_for_visit?: string | null;
   image_url?: string | null;
   follow_up_date?: string | null;
   notes?: string | null;
@@ -113,6 +118,60 @@ export interface ActiveMedicine {
   end_date: string | null;
   doctor_name: string | null;
   diagnosis: string | null;
+}
+
+export interface HospitalDetail extends Hospital {
+  last_visit_date: string | null;
+  visit_count: number;
+  doctors: Doctor[];
+}
+
+export interface VisitSummary {
+  prescription_id: string;
+  hospital_id: string | null;
+  hospital_name: string | null;
+  hospital_address: string | null;
+  hospital_phone: string | null;
+  visit_date: string;
+  patient_name: string | null;
+  reason_for_visit: string | null;
+  diagnosis: string | null;
+  doctor_name: string | null;
+  doctor_qualification: string | null;
+  doctor_registration_id: string | null;
+  medicines: Medicine[];
+}
+
+export interface DoctorDetail extends Doctor {
+  last_visit_date: string | null;
+  visit_count: number;
+}
+
+// OCR extraction result (before saving)
+export interface OCRMedicine {
+  name: string;
+  dosage: string | null;
+  frequency: string | null;
+  duration: string | null;
+  timing: string | null;
+  morning: boolean;
+  afternoon: boolean;
+  night: boolean;
+}
+
+export interface OCRPrescriptionResult {
+  doctor_name: string | null;
+  doctor_qualification: string | null;
+  doctor_registration_id: string | null;
+  hospital_name: string | null;
+  hospital_address: string | null;
+  hospital_phone: string | null;
+  visit_date: string | null;
+  diagnosis: string | null;
+  reason_for_visit: string | null;
+  medicines: OCRMedicine[];
+  follow_up_date: string | null;
+  raw_text: string | null;
 }
 
 export const SPECIALIZATIONS = [

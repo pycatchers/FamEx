@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'reac
 import { useRouter } from 'expo-router';
 import { useCreateLoan } from '@/hooks/queries/use-loans';
 import { LOAN_TYPES } from '@/types/loans';
+import DatePickerField from '@/components/date-picker-field';
 
 export default function AddLoanScreen() {
   const router = useRouter();
@@ -137,23 +138,20 @@ export default function AddLoanScreen() {
         />
 
         {/* Start Date */}
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date *</Text>
-        <TextInput
-          className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 mb-4 text-gray-900 dark:text-white bg-white dark:bg-gray-800"
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor="#9ca3af"
+        <DatePickerField
+          label="Start Date"
           value={startDate}
-          onChangeText={setStartDate}
+          onChange={setStartDate}
+          required
         />
 
         {/* End Date */}
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date *</Text>
-        <TextInput
-          className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 mb-4 text-gray-900 dark:text-white bg-white dark:bg-gray-800"
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor="#9ca3af"
+        <DatePickerField
+          label="End Date"
           value={endDate}
-          onChangeText={setEndDate}
+          onChange={setEndDate}
+          required
+          minimumDate={startDate ? new Date(startDate) : undefined}
         />
 
         {/* EMI Day */}

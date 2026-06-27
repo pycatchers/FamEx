@@ -12,6 +12,7 @@ class ShopCreate(BaseModel):
     latitude: Optional[Decimal] = None
     longitude: Optional[Decimal] = None
     phone: Optional[str] = None
+    gstin: Optional[str] = None
     category: Optional[str] = None
     is_favorite: bool = False
     notes: Optional[str] = None
@@ -23,6 +24,7 @@ class ShopUpdate(BaseModel):
     latitude: Optional[Decimal] = None
     longitude: Optional[Decimal] = None
     phone: Optional[str] = None
+    gstin: Optional[str] = None
     category: Optional[str] = None
     is_favorite: Optional[bool] = None
     notes: Optional[str] = None
@@ -36,6 +38,7 @@ class ShopResponse(BaseModel):
     latitude: Optional[Decimal] = None
     longitude: Optional[Decimal] = None
     phone: Optional[str] = None
+    gstin: Optional[str] = None
     category: Optional[str] = None
     is_favorite: bool
     notes: Optional[str] = None
@@ -43,6 +46,17 @@ class ShopResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class RecentShopResponse(BaseModel):
+    id: UUID
+    name: str
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    gstin: Optional[str] = None
+    last_visit_date: Optional[date] = None
+    bill_count: int = 0
+    total_spent: Decimal = Decimal("0")
 
 
 # --- Purchase Item ---
@@ -184,3 +198,13 @@ class ShoppingAnalytics(BaseModel):
     top_items: list[ItemFrequency] = []
     total_this_month: Decimal = Decimal("0")
     total_last_month: Decimal = Decimal("0")
+
+
+class ItemPriceComparison(BaseModel):
+    shop_name: str
+    shop_id: UUID
+    min_price: Decimal
+    max_price: Decimal
+    avg_price: Decimal
+    last_bought_date: date
+    last_price: Decimal

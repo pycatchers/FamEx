@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'reac
 import { useRouter } from 'expo-router';
 import { useCreateInsurance } from '@/hooks/queries/use-insurance';
 import { POLICY_TYPES, PREMIUM_FREQUENCIES } from '@/types/insurance';
+import DatePickerField from '@/components/date-picker-field';
 
 export default function AddInsuranceScreen() {
   const router = useRouter();
@@ -134,23 +135,20 @@ export default function AddInsuranceScreen() {
         </View>
 
         {/* Start Date */}
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date *</Text>
-        <TextInput
-          className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 mb-4 text-gray-900 dark:text-white bg-white dark:bg-gray-800"
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor="#9ca3af"
+        <DatePickerField
+          label="Start Date"
           value={startDate}
-          onChangeText={setStartDate}
+          onChange={setStartDate}
+          required
         />
 
         {/* End Date */}
-        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date *</Text>
-        <TextInput
-          className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 mb-4 text-gray-900 dark:text-white bg-white dark:bg-gray-800"
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor="#9ca3af"
+        <DatePickerField
+          label="End Date"
           value={endDate}
-          onChangeText={setEndDate}
+          onChange={setEndDate}
+          required
+          minimumDate={startDate ? new Date(startDate) : undefined}
         />
 
         {/* Nominee */}

@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Icon from '@react-native-vector-icons/ionicons';
 import { useTranslation } from 'react-i18next';
@@ -49,52 +50,54 @@ export default function MoreScreen() {
   ];
 
   return (
-    <ScrollView className="flex-1 bg-gray-50 dark:bg-gray-900">
-      <View className="p-4">
-        {sections.map((section) => (
-          <View key={section.title} className="mb-6">
-            <Text className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-2 ml-1">
-              {section.title}
-            </Text>
-            <View className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm">
-              {section.items.map((item, index) => (
-                <TouchableOpacity
-                  key={item.title}
-                  className={`flex-row items-center px-4 py-4 ${index < section.items.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''}`}
-                  onPress={() => {
-                    if ('action' in item && item.action) {
-                      item.action();
-                    } else if ('route' in item) {
-                      router.push(item.route as any);
-                    }
-                  }}
-                >
-                  <View className="w-8 h-8 rounded-full justify-center items-center mr-3" style={{ backgroundColor: `${item.color}15` }}>
-                    <Icon name={item.icon} size={18} color={item.color} />
-                  </View>
-                  <Text className="flex-1 text-gray-900 dark:text-white">{item.title}</Text>
-                  <Icon name="chevron-forward" size={16} color="#9ca3af" />
-                </TouchableOpacity>
-              ))}
+    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
+      <ScrollView className="flex-1">
+        <View className="p-4">
+          {sections.map((section) => (
+            <View key={section.title} className="mb-6">
+              <Text className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-2 ml-1">
+                {section.title}
+              </Text>
+              <View className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm">
+                {section.items.map((item, index) => (
+                  <TouchableOpacity
+                    key={item.title}
+                    className={`flex-row items-center px-4 py-4 ${index < section.items.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''}`}
+                    onPress={() => {
+                      if ('action' in item && item.action) {
+                        item.action();
+                      } else if ('route' in item) {
+                        router.push(item.route as any);
+                      }
+                    }}
+                  >
+                    <View className="w-8 h-8 rounded-full justify-center items-center mr-3" style={{ backgroundColor: `${item.color}15` }}>
+                      <Icon name={item.icon} size={18} color={item.color} />
+                    </View>
+                    <Text className="flex-1 text-gray-900 dark:text-white">{item.title}</Text>
+                    <Icon name="chevron-forward" size={16} color="#9ca3af" />
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-          </View>
-        ))}
+          ))}
 
-        {/* Sign Out */}
-        <TouchableOpacity
-          className="bg-white dark:bg-gray-800 rounded-xl px-4 py-4 shadow-sm flex-row items-center"
-          onPress={handleSignOut}
-        >
-          <View className="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/20 justify-center items-center mr-3">
-            <Icon name="log-out-outline" size={18} color="#ef4444" />
-          </View>
-          <Text className="text-red-600 dark:text-red-400 font-medium">Sign Out</Text>
-        </TouchableOpacity>
+          {/* Sign Out */}
+          <TouchableOpacity
+            className="bg-white dark:bg-gray-800 rounded-xl px-4 py-4 shadow-sm flex-row items-center"
+            onPress={handleSignOut}
+          >
+            <View className="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/20 justify-center items-center mr-3">
+              <Icon name="log-out-outline" size={18} color="#ef4444" />
+            </View>
+            <Text className="text-red-600 dark:text-red-400 font-medium">Sign Out</Text>
+          </TouchableOpacity>
 
-        <Text className="text-center text-gray-400 dark:text-gray-600 text-xs mt-6">
-          FamEx v1.0.0
-        </Text>
-      </View>
-    </ScrollView>
+          <Text className="text-center text-gray-400 dark:text-gray-600 text-xs mt-6">
+            FamEx v1.0.0
+          </Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

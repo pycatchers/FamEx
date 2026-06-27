@@ -1,6 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
-import { Hospital, HospitalCreate, Doctor, DoctorCreate, Prescription, PrescriptionCreate, ActiveMedicine } from '@/types/medical';
+import { Hospital, HospitalCreate, HospitalDetail, Doctor, DoctorCreate, DoctorDetail, Prescription, PrescriptionCreate, ActiveMedicine, VisitSummary } from '@/types/medical';
+
+// Visits (Medical tab main list)
+export function useVisits() {
+  return useQuery({
+    queryKey: ['visits'],
+    queryFn: () => apiClient<VisitSummary[]>('/api/v1/medical/visits'),
+  });
+}
 
 // Hospitals
 export function useHospitals() {
@@ -32,12 +40,29 @@ export function useDeleteHospital() {
   });
 }
 
+// Hospital Details (with visit stats)
+export function useHospitalDetails() {
+  return useQuery({
+    queryKey: ['hospitals', 'details'],
+    queryFn: () => apiClient<HospitalDetail[]>('/api/v1/medical/hospitals/details'),
+  });
+}
+
 // Doctors
 export function useDoctors(hospitalId?: string) {
   const params = hospitalId ? `?hospital_id=${hospitalId}` : '';
   return useQuery({
     queryKey: ['doctors', { hospitalId }],
     queryFn: () => apiClient<Doctor[]>(`/api/v1/medical/doctors${params}`),
+  });
+}
+
+// Doctor Details (with visit stats)
+export function useDoctorDetails(hospitalId?: string) {
+  const params = hospitalId ? `?hospital_id=${hospitalId}` : '';
+  return useQuery({
+    queryKey: ['doctors', 'details', { hospitalId }],
+    queryFn: () => apiClient<DoctorDetail[]>(`/api/v1/medical/doctors/details${params}`),
   });
 }
 
@@ -99,6 +124,18 @@ export function useDeletePrescription() {
       apiClient(`/api/v1/medical/prescriptions/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prescriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['active-medicines'] });
+    },
+  });
+}
+
+export function useDeleteVisit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (prescriptionId: string) =>
+      apiClient(`/api/v1/medical/prescriptions/${prescriptionId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['visits'] });
       queryClient.invalidateQueries({ queryKey: ['active-medicines'] });
     },
   });
