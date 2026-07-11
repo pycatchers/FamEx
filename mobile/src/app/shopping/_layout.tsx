@@ -13,6 +13,7 @@ export default function ShoppingLayout() {
       <Stack.Screen name="checklists" options={{ title: 'Shopping Lists', headerShown: false }} />
       <Stack.Screen name="checklist-detail" options={{ title: 'List', headerShown: false }} />
       <Stack.Screen name="bill-detail" options={{ title: 'Bill Details' }} />
+      <Stack.Screen name="edit-bill" options={{ title: 'Edit Bill' }} />
       <Stack.Screen name="shop-detail" options={{ title: 'Shop Details', headerShown: false }} />
     </Stack>
   );

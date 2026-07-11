@@ -138,6 +138,20 @@ export default function ShoppingScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            className="flex-row items-center bg-primary-50 dark:bg-primary-900/20 rounded-xl p-4 mb-3"
+            onPress={() => { setShowAddMenu(false); router.push('/shopping/voice-bill' as any); }}
+          >
+            <View className="w-10 h-10 bg-primary-600 rounded-full items-center justify-center mr-4">
+              <Icon name="mic" size={20} color="white" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-base font-semibold text-gray-900 dark:text-white">Speech to Text</Text>
+              <Text className="text-sm text-gray-500 dark:text-gray-400">Dictate your items and let AI structure them</Text>
+            </View>
+            <Icon name="chevron-forward" size={18} color="#9ca3af" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
             className="flex-row items-center bg-gray-50 dark:bg-gray-800 rounded-xl p-4"
             onPress={() => { setShowAddMenu(false); router.push('/shopping/add-bill' as any); }}
           >

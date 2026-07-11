@@ -6,6 +6,7 @@ from app.models.user import User
 from app.config import settings
 from app.integrations.gemini import (
     extract_bill_data,
+    extract_items_from_audio,
     extract_prescription_data,
     extract_voice_to_items,
     translate_text,
@@ -243,6 +244,50 @@ async def voice_to_items(
         return VoiceToItemsResponse(items=items)
     except Exception as e:
         return VoiceToItemsResponse(raw_text=f"Extraction failed: {str(e)}")
+
+
+ALLOWED_AUDIO_TYPES = {
+    "audio/m4a", "audio/x-m4a", "audio/mp4", "audio/mpeg",
+    "audio/wav", "audio/x-wav", "audio/webm", "audio/aac",
+}
+
+
+@router.post("/voice/audio", response_model=VoiceToItemsResponse)
+async def voice_audio_to_items(
+    file: UploadFile = File(...),
+    language: str = Form("en"),
+    current_user: User = Depends(get_current_user),
+):
+    """Transcribe a recorded shopping list audio clip and extract structured items."""
+    if not settings.GEMINI_API_KEY:
+        raise HTTPException(status_code=503, detail="AI service not configured")
+
+    if file.content_type not in ALLOWED_AUDIO_TYPES:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.content_type}")
+
+    audio_bytes = await file.read()
+    if not audio_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+    try:
+        result = await extract_items_from_audio(
+            audio_bytes=audio_bytes,
+            audio_mime_type=file.content_type,
+            language=language,
+        )
+        items = [
+            VoiceItem(
+                item_name=item.get("item_name", "Unknown"),
+                quantity=item.get("quantity"),
+                unit=item.get("unit"),
+                bought_price=item.get("bought_price"),
+            )
+            for item in result.get("items", [])
+        ]
+        return VoiceToItemsResponse(items=items)
+    except Exception:
+        logger.exception("Voice audio extraction failed")
+        return VoiceToItemsResponse(raw_text="Extraction failed. Please try again.")
 
 
 # ---------------------------------------------------------------------------

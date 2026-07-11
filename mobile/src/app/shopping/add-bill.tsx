@@ -26,11 +26,7 @@ export default function AddBillScreen() {
 
   const updateItem = (index: number, field: keyof PurchaseItemCreate, value: string) => {
     const updated = [...items];
-    if (field === 'bought_price' || field === 'quantity' || field === 'mrp' || field === 'discount') {
-      (updated[index] as any)[field] = parseFloat(value) || 0;
-    } else {
-      (updated[index] as any)[field] = value;
-    }
+    (updated[index] as any)[field] = value;
     setItems(updated);
   };
 
@@ -39,10 +35,10 @@ export default function AddBillScreen() {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const totalAmount = items.reduce((sum, item) => sum + (item.bought_price || 0), 0);
+  const totalAmount = items.reduce((sum, item) => sum + (parseFloat(item.bought_price as any) || 0), 0);
 
   const handleSubmit = async () => {
-    const validItems = items.filter(i => i.item_name.trim() && i.bought_price > 0);
+    const validItems = items.filter(i => i.item_name.trim() && parseFloat(i.bought_price as any) > 0);
     if (!validItems.length) {
       Alert.alert('Error', 'Add at least one item with name and price');
       return;
@@ -170,9 +166,14 @@ export default function AddBillScreen() {
                   className="border border-gray-200 dark:border-gray-600 rounded px-3 py-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700"
                   placeholder="Qty"
                   placeholderTextColor="#9ca3af"
-                  value={item.quantity ? String(item.quantity) : ''}
+                  value={String(item.quantity ?? '')}
                   onChangeText={(v) => updateItem(index, 'quantity', v)}
-                  keyboardType="numeric"
+                  onBlur={() => {
+                    const updated = [...items];
+                    (updated[index] as any).quantity = parseFloat(String(item.quantity)) || 0;
+                    setItems(updated);
+                  }}
+                  keyboardType="decimal-pad"
                 />
               </View>
               <View className="flex-row flex-1">
@@ -191,8 +192,13 @@ export default function AddBillScreen() {
                   className="border border-gray-200 dark:border-gray-600 rounded px-3 py-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700"
                   placeholder="₹ Price"
                   placeholderTextColor="#9ca3af"
-                  value={item.bought_price ? String(item.bought_price) : ''}
+                  value={String(item.bought_price ?? '')}
                   onChangeText={(v) => updateItem(index, 'bought_price', v)}
+                  onBlur={() => {
+                    const updated = [...items];
+                    (updated[index] as any).bought_price = parseFloat(String(item.bought_price)) || 0;
+                    setItems(updated);
+                  }}
                   keyboardType="numeric"
                 />
               </View>

@@ -19,6 +19,35 @@ def _clean_json_response(text: str) -> str:
     return text.strip()
 
 
+def _parse_json_response(text: str) -> dict:
+    try:
+        return json.loads(_clean_json_response(text))
+    except json.JSONDecodeError:
+        logger.error("Gemini returned malformed JSON (%d chars): %r", len(text), text[:2000])
+        raise
+
+
+ITEMS_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "items": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "item_name": {"type": "STRING"},
+                    "quantity": {"type": "NUMBER", "nullable": True},
+                    "unit": {"type": "STRING", "nullable": True},
+                    "bought_price": {"type": "NUMBER", "nullable": True},
+                },
+                "required": ["item_name"],
+            },
+        },
+    },
+    "required": ["items"],
+}
+
+
 async def _fetch_remote_image(image_url: str) -> tuple[bytes, str]:
     async with httpx.AsyncClient() as client:
         try:
@@ -35,19 +64,28 @@ async def call_gemini(
     image_bytes: bytes | None = None,
     image_mime_type: str = "image/jpeg",
     image_url: str | None = None,
+    audio_bytes: bytes | None = None,
+    audio_mime_type: str = "audio/m4a",
+    response_schema: dict | None = None,
 ) -> str:
-    """Call Gemini Flash API with a text prompt and an optional image.
+    """Call Gemini Flash API with a text prompt and an optional image or audio clip.
 
     Pass `image_bytes` for images uploaded to this server (the normal case
     for mobile apps). `image_url` is only for images already hosted at a
-    public http(s) URL — never a device-local `file://` path.
+    public http(s) URL — never a device-local `file://` path. Pass
+    `audio_bytes` for a recorded audio clip uploaded to this server.
     """
     if not settings.GEMINI_API_KEY:
         raise ValueError("GEMINI_API_KEY not configured")
 
     parts = [{"text": prompt}]
 
-    if image_bytes is not None:
+    if audio_bytes is not None:
+        audio_data = base64.b64encode(audio_bytes).decode("utf-8")
+        parts.insert(0, {
+            "inline_data": {"mime_type": audio_mime_type, "data": audio_data}
+        })
+    elif image_bytes is not None:
         img_data = base64.b64encode(image_bytes).decode("utf-8")
         parts.insert(0, {
             "inline_data": {"mime_type": image_mime_type, "data": img_data}
@@ -65,9 +103,14 @@ async def call_gemini(
             "inline_data": {"mime_type": content_type, "data": img_data}
         })
 
+    generation_config: dict = {"temperature": 0.1, "maxOutputTokens": 8192}
+    if response_schema is not None:
+        generation_config["responseMimeType"] = "application/json"
+        generation_config["responseSchema"] = response_schema
+
     payload = {
         "contents": [{"parts": parts}],
-        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 4096},
+        "generationConfig": generation_config,
     }
 
     async with httpx.AsyncClient() as client:
@@ -113,7 +156,7 @@ Return a valid JSON object with these fields:
 Return ONLY the JSON, no markdown, no explanation."""
 
     text = await call_gemini(prompt, image_bytes=image_bytes, image_mime_type=image_mime_type)
-    return json.loads(_clean_json_response(text))
+    return _parse_json_response(text)
 
 
 async def extract_prescription_data(
@@ -148,7 +191,31 @@ Return a valid JSON object with these fields:
 Return ONLY the JSON, no markdown, no explanation."""
 
     text = await call_gemini(prompt, image_bytes=image_bytes, image_mime_type=image_mime_type)
-    return json.loads(_clean_json_response(text))
+    return _parse_json_response(text)
+
+
+async def extract_items_from_audio(
+    audio_bytes: bytes,
+    audio_mime_type: str = "audio/m4a",
+    language: str = "en",
+) -> dict:
+    """Transcribe a recorded shopping list and convert it into structured items in one call."""
+    lang_instruction = "The audio may be in Tamil; translate item names to English." if language == "ta" else ""
+    prompt = f"""Listen to this audio recording of a spoken shopping list and extract structured items.
+{lang_instruction}
+Return a valid JSON object with:
+- "items": array of objects, each with:
+  - "item_name": string
+  - "quantity": number or null
+  - "unit": string or null
+  - "bought_price": number or null
+
+Return ONLY the JSON, no markdown, no explanation."""
+
+    text = await call_gemini(
+        prompt, audio_bytes=audio_bytes, audio_mime_type=audio_mime_type, response_schema=ITEMS_SCHEMA
+    )
+    return _parse_json_response(text)
 
 
 async def extract_voice_to_items(text: str, language: str = "en") -> dict:
@@ -167,8 +234,8 @@ Return a valid JSON object with:
 
 Return ONLY the JSON, no markdown, no explanation."""
 
-    result = await call_gemini(prompt)
-    return json.loads(_clean_json_response(result))
+    result = await call_gemini(prompt, response_schema=ITEMS_SCHEMA)
+    return _parse_json_response(result)
 
 
 async def translate_text(text: str, source_lang: str, target_lang: str) -> str:

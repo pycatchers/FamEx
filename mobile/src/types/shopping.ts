@@ -92,6 +92,19 @@ export interface BillCreate {
   items: PurchaseItemCreate[];
 }
 
+export interface BillUpdate {
+  shop_id?: string | null;
+  bill_number?: string | null;
+  bill_date?: string;
+  total_amount?: number;
+  discount_amount?: number;
+  tax_amount?: number;
+  payment_method?: string | null;
+  image_url?: string | null;
+  notes?: string | null;
+  items?: PurchaseItemCreate[];
+}
+
 export interface ShoppingChecklist {
   id: string;
   user_id: string;

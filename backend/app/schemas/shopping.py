@@ -110,6 +110,7 @@ class BillUpdate(BaseModel):
     payment_method: Optional[str] = None
     image_url: Optional[str] = None
     notes: Optional[str] = None
+    items: Optional[list[PurchaseItemCreate]] = None
 
 
 class BillResponse(BaseModel):

@@ -65,7 +65,14 @@ export default function BillDetailScreen() {
         ))}
 
         <TouchableOpacity
-          className="bg-red-50 dark:bg-red-900/20 rounded-lg py-3 mt-6"
+          className="bg-primary-600 rounded-lg py-3 mt-6"
+          onPress={() => router.push(`/shopping/edit-bill?id=${id}` as any)}
+        >
+          <Text className="text-white text-center font-semibold">Edit Bill</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          className="bg-red-50 dark:bg-red-900/20 rounded-lg py-3 mt-3"
           onPress={handleDelete}
         >
           <Text className="text-red-600 dark:text-red-400 text-center font-semibold">Delete Bill</Text>

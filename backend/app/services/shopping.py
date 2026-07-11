@@ -160,11 +160,25 @@ class BillService:
         return result.scalar_one()
 
     async def update_bill(self, bill: ShoppingBill, data: BillUpdate) -> ShoppingBill:
-        for field, value in data.model_dump(exclude_unset=True).items():
+        update_data = data.model_dump(exclude_unset=True, exclude={"items"})
+        for field, value in update_data.items():
             setattr(bill, field, value)
+
+        if data.items is not None:
+            bill.items.clear()
+            await self.db.flush()
+            for item_data in data.items:
+                self.db.add(PurchaseItem(bill_id=bill.id, **item_data.model_dump()))
+
         await self.db.flush()
         await self.db.refresh(bill)
-        return bill
+
+        result = await self.db.execute(
+            select(ShoppingBill)
+            .where(ShoppingBill.id == bill.id)
+            .options(selectinload(ShoppingBill.items))
+        )
+        return result.scalar_one()
 
     async def delete_bill(self, bill: ShoppingBill) -> None:
         await self.db.delete(bill)

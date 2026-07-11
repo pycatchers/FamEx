@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
-import { Shop, ShopCreate, RecentShop, ShoppingBill, BillCreate, ShoppingChecklist, ShoppingAnalytics, ItemPriceComparison } from '@/types/shopping';
+import { Shop, ShopCreate, RecentShop, ShoppingBill, BillCreate, BillUpdate, ShoppingChecklist, ShoppingAnalytics, ItemPriceComparison } from '@/types/shopping';
 
 // Recent Shops (main Shopping tab)
 export function useRecentShops() {
@@ -64,6 +64,19 @@ export function useCreateBill() {
       apiClient<ShoppingBill>('/api/v1/shopping/bills', { method: 'POST', body: data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bills'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+    },
+  });
+}
+
+export function useUpdateBill() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: BillUpdate }) =>
+      apiClient<ShoppingBill>(`/api/v1/shopping/bills/${id}`, { method: 'PUT', body: data }),
+    onSuccess: (_result, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['bills'] });
+      queryClient.invalidateQueries({ queryKey: ['bills', id] });
       queryClient.invalidateQueries({ queryKey: ['analytics'] });
     },
   });
