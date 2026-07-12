@@ -75,7 +75,7 @@ async def save_ocr_bill(
             quantity=item.quantity,
             unit=item.unit,
             mrp=item.mrp,
-            discount=item.discount,
+            discount=D(str(item.discount)) if item.discount is not None else D("0"),
             bought_price=D(str(item.bought_price)),
         )
         for item in data.items
@@ -148,7 +148,7 @@ async def ocr_bill_save(
             quantity=item.get("quantity"),
             unit=item.get("unit"),
             mrp=item.get("mrp"),
-            discount=item.get("discount"),
+            discount=D(str(item.get("discount"))) if item.get("discount") is not None else D("0"),
             bought_price=item.get("bought_price", 0),
         )
         for item in data.get("items", [])

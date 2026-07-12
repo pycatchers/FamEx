@@ -103,7 +103,11 @@ async def call_gemini(
             "inline_data": {"mime_type": content_type, "data": img_data}
         })
 
-    generation_config: dict = {"temperature": 0.1, "maxOutputTokens": 8192}
+    generation_config: dict = {
+        "temperature": 0.1,
+        "maxOutputTokens": 16384,
+        "thinkingConfig": {"thinkingBudget": 0},
+    }
     if response_schema is not None:
         generation_config["responseMimeType"] = "application/json"
         generation_config["responseSchema"] = response_schema
@@ -126,6 +130,9 @@ async def call_gemini(
     candidates = data.get("candidates", [])
     if not candidates:
         return ""
+    if candidates[0].get("finishReason") == "MAX_TOKENS":
+        logger.error("Gemini response truncated by MAX_TOKENS (maxOutputTokens=%s)", generation_config["maxOutputTokens"])
+        raise ValueError("Gemini response was truncated (too long). Try a shorter recording or fewer items at once.")
     content_parts = candidates[0].get("content", {}).get("parts", [])
     return content_parts[0].get("text", "") if content_parts else ""
 
