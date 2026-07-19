@@ -141,13 +141,21 @@ export default function LoanDetailScreen() {
           </View>
         ))}
 
-        {/* Delete */}
-        <TouchableOpacity
-          className="bg-red-50 dark:bg-red-900/20 rounded-lg py-3 mt-6"
-          onPress={handleDelete}
-        >
-          <Text className="text-red-600 dark:text-red-400 text-center font-semibold">Delete Loan</Text>
-        </TouchableOpacity>
+        {/* Actions */}
+        <View className="flex-row gap-3 mt-6">
+          <TouchableOpacity
+            className="flex-1 bg-primary-600 rounded-lg py-3"
+            onPress={() => router.push(`/loans/add?editId=${id}` as any)}
+          >
+            <Text className="text-white text-center font-semibold">Edit Loan</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className="flex-1 bg-red-50 dark:bg-red-900/20 rounded-lg py-3"
+            onPress={handleDelete}
+          >
+            <Text className="text-red-600 dark:text-red-400 text-center font-semibold">Delete Loan</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </ScrollView>
   );

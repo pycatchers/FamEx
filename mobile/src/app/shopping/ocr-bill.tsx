@@ -1,15 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, Alert,
   ActivityIndicator, ScrollView, Image,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import Icon from '@react-native-vector-icons/ionicons';
 import { apiClient, apiUploadFile } from '@/lib/api';
-import { compressImage } from '@/lib/image-upload';
+import { compressImage, uploadBillPhoto } from '@/lib/image-upload';
 import { useQueryClient } from '@tanstack/react-query';
-import { OCRBillResult, OCRBillItem, ShoppingBill } from '@/types/shopping';
+import { useAuth } from '@/providers/auth-provider';
+import { useDraft, useDeleteDraft } from '@/hooks/queries/use-shopping';
+import { useDraftAutosave } from '@/hooks/use-draft-autosave';
+import PhotoCropEditor from '@/components/photo-crop-editor';
+import DatePickerField from '@/components/date-picker-field';
+import { OCRBillResult, OCRBillItem, ShoppingBill, PURCHASE_MODES } from '@/types/shopping';
 
 type Step = 'capture' | 'loading' | 'preview';
 
@@ -18,11 +23,19 @@ const today = () => new Date().toISOString().split('T')[0];
 export default function OCRBillScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { draftId: draftIdParam } = useLocalSearchParams<{ draftId?: string }>();
+  const { data: existingDraft, isError: draftLoadFailed } = useDraft(draftIdParam ?? null);
+  const deleteDraft = useDeleteDraft();
 
-  const [step, setStep] = useState<Step>('capture');
+  const [step, setStep] = useState<Step>(draftIdParam ? 'loading' : 'capture');
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [pendingUri, setPendingUri] = useState<string | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(draftIdParam ?? null);
+  const [initialized, setInitialized] = useState(!draftIdParam);
 
   // Editable extracted data
   const [shopName, setShopName] = useState('');
@@ -30,9 +43,45 @@ export default function OCRBillScreen() {
   const [shopPhone, setShopPhone] = useState('');
   const [shopGstin, setShopGstin] = useState('');
   const [billDate, setBillDate] = useState(today());
+  const [purchaseMode, setPurchaseMode] = useState<string>('offline');
   const [items, setItems] = useState<OCRBillItem[]>([]);
 
   const totalAmount = items.reduce((s, i) => s + (Number(i.bought_price) || 0), 0);
+
+  // Rehydrate from an existing draft (resumed via ?draftId=) straight into the preview step.
+  useEffect(() => {
+    if (existingDraft && !initialized) {
+      const d = existingDraft.draft_data as any;
+      setShopName(d.shopName ?? '');
+      setShopAddress(d.shopAddress ?? '');
+      setShopPhone(d.shopPhone ?? '');
+      setShopGstin(d.shopGstin ?? '');
+      setBillDate(d.billDate ?? today());
+      setPurchaseMode(d.purchaseMode ?? 'offline');
+      setItems(Array.isArray(d.items) && d.items.length ? d.items : [{ item_name: '', brand_name: '', quantity: null, unit: null, mrp: null, discount: null, bought_price: 0 }]);
+      setUploadedImageUrl(d.uploadedImageUrl ?? null);
+      setStep('preview');
+      setInitialized(true);
+    }
+  }, [existingDraft, initialized]);
+
+  // If the draft failed to load (e.g. already deleted), fall back to a fresh capture
+  // instead of leaving the user stuck on a permanent loading spinner.
+  useEffect(() => {
+    if (draftLoadFailed && !initialized) {
+      setInitialized(true);
+      setStep('capture');
+    }
+  }, [draftLoadFailed, initialized]);
+
+  const isMeaningful = step === 'preview' && items.some((i) => i.item_name.trim() !== '');
+  useDraftAutosave(
+    'ocr',
+    { shopName, shopAddress, shopPhone, shopGstin, billDate, purchaseMode, items, uploadedImageUrl },
+    isMeaningful && initialized,
+    draftId,
+    setDraftId,
+  );
 
   // ── Image selection ──────────────────────────────────────────────────────
   const pickImage = async (useCamera: boolean) => {
@@ -46,22 +95,27 @@ export default function OCRBillScreen() {
       : await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
 
     if (result.canceled || !result.assets[0]) return;
-    setImageUri(result.assets[0].uri);
-    setError(null);
-    await extract(result.assets[0].uri);
+    setPendingUri(result.assets[0].uri);
   };
 
   // ── OCR extraction ───────────────────────────────────────────────────────
   const extract = async (uri: string) => {
     setStep('loading');
     setError(null);
+    setUploadedImageUrl(null);
     try {
       const compressedUri = await compressImage(uri);
-      const result = await apiUploadFile<OCRBillResult>(
-        '/api/v1/ai/ocr/bill',
-        { uri: compressedUri, name: `bill_${Date.now()}.jpg`, type: 'image/jpeg' },
-        { language: 'en' },
-      );
+      const [result] = await Promise.all([
+        apiUploadFile<OCRBillResult>(
+          '/api/v1/ai/ocr/bill',
+          { uri: compressedUri, name: `bill_${Date.now()}.jpg`, type: 'image/jpeg' },
+          { language: 'en' },
+        ),
+        // Persisting the photo is best-effort — a failure here should never block OCR extraction.
+        user
+          ? uploadBillPhoto(compressedUri, user.id, true).then(setUploadedImageUrl).catch(() => {})
+          : Promise.resolve(),
+      ]);
 
       if (result.raw_text && !result.items.length) {
         setError(result.raw_text);
@@ -74,7 +128,7 @@ export default function OCRBillScreen() {
       setShopPhone(result.shop_phone ?? '');
       setShopGstin(result.shop_gstin ?? '');
       setBillDate(result.bill_date ?? today());
-      setItems(result.items.length ? result.items : [{ item_name: '', quantity: null, unit: null, mrp: null, discount: null, bought_price: 0 }]);
+      setItems(result.items.length ? result.items : [{ item_name: '', brand_name: '', quantity: null, unit: null, mrp: null, discount: null, bought_price: 0 }]);
       setStep('preview');
     } catch (err: any) {
       setError(err.message || 'Could not extract data from this image.');
@@ -94,7 +148,7 @@ export default function OCRBillScreen() {
   };
 
   const addItem = () =>
-    setItems([...items, { item_name: '', quantity: null, unit: null, mrp: null, discount: null, bought_price: 0 }]);
+    setItems([...items, { item_name: '', brand_name: '', quantity: null, unit: null, mrp: null, discount: null, bought_price: 0 }]);
 
   const removeItem = (idx: number) => {
     if (items.length === 1) return;
@@ -117,8 +171,11 @@ export default function OCRBillScreen() {
           shop_gstin: shopGstin.trim() || null,
           bill_date: billDate,
           total_amount: totalAmount,
+          purchase_mode: purchaseMode,
+          image_url: uploadedImageUrl,
           items: validItems.map(i => ({
             item_name: i.item_name,
+            brand_name: i.brand_name || null,
             quantity: i.quantity,
             unit: i.unit || null,
             mrp: i.mrp,
@@ -129,6 +186,7 @@ export default function OCRBillScreen() {
       });
       queryClient.invalidateQueries({ queryKey: ['shops', 'recent'] });
       queryClient.invalidateQueries({ queryKey: ['bills'] });
+      if (draftId) deleteDraft.mutate(draftId);
       router.back();
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to save bill.');
@@ -200,17 +258,34 @@ export default function OCRBillScreen() {
             <Text className="text-gray-500 dark:text-gray-400 text-center">Cancel</Text>
           </TouchableOpacity>
         </View>
+
+        <PhotoCropEditor
+          visible={!!pendingUri}
+          imageUri={pendingUri}
+          onCancel={() => setPendingUri(null)}
+          onConfirm={(resultUri) => {
+            setPendingUri(null);
+            setImageUri(resultUri);
+            setError(null);
+            extract(resultUri);
+          }}
+        />
       </ScrollView>
     );
   }
 
   // ── Render: loading step ──────────────────────────────────────────────────
   if (step === 'loading') {
+    const isResumingDraft = !!draftIdParam && !initialized;
     return (
       <View className="flex-1 bg-gray-50 dark:bg-gray-900 items-center justify-center">
         <ActivityIndicator size="large" color="#2563eb" />
-        <Text className="text-gray-600 dark:text-gray-400 mt-4 text-base">Analysing bill with AI…</Text>
-        <Text className="text-gray-400 dark:text-gray-500 mt-1 text-sm">Extracting shop and items</Text>
+        <Text className="text-gray-600 dark:text-gray-400 mt-4 text-base">
+          {isResumingDraft ? 'Loading draft…' : 'Analysing bill with AI…'}
+        </Text>
+        {!isResumingDraft && (
+          <Text className="text-gray-400 dark:text-gray-500 mt-1 text-sm">Extracting shop and items</Text>
+        )}
       </View>
     );
   }
@@ -239,7 +314,30 @@ export default function OCRBillScreen() {
               <Field label="GSTIN" value={shopGstin} onChange={setShopGstin} placeholder="GSTIN" autoCapitalize="characters" />
             </View>
           </View>
-          <Field label="Bill Date" value={billDate} onChange={setBillDate} placeholder="YYYY-MM-DD" />
+          <DatePickerField
+            label="Bill Date"
+            value={billDate}
+            onChange={setBillDate}
+            maximumDate={new Date()}
+          />
+          <Text className="text-xs text-gray-500 dark:text-gray-400 mb-1">Purchase Type</Text>
+          <View className="flex-row">
+            {PURCHASE_MODES.map((m) => (
+              <TouchableOpacity
+                key={m}
+                className={`mr-2 px-3 py-2 rounded-full flex-row items-center ${purchaseMode === m ? 'bg-primary-600' : 'bg-gray-100 dark:bg-gray-700'}`}
+                onPress={() => setPurchaseMode(m)}
+              >
+                <Icon
+                  name={m === 'online' ? 'globe-outline' : 'storefront-outline'}
+                  size={14}
+                  color={purchaseMode === m ? 'white' : '#6b7280'}
+                  style={{ marginRight: 4 }}
+                />
+                <Text className={`text-sm capitalize ${purchaseMode === m ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{m}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* Items */}
@@ -268,6 +366,13 @@ export default function OCRBillScreen() {
                   <Icon name="close-circle" size={22} color="#ef4444" />
                 </TouchableOpacity>
               </View>
+              <TextInput
+                className="border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700 mb-2 text-sm"
+                value={item.brand_name ?? ''}
+                onChangeText={v => updateItem(idx, 'brand_name', v)}
+                placeholder="Brand (optional)"
+                placeholderTextColor="#9ca3af"
+              />
               <View className="flex-row gap-2">
                 <TextInput
                   className="w-16 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700 text-sm text-center"

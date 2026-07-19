@@ -1,13 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useCreateInsurance } from '@/hooks/queries/use-insurance';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useCreateInsurance, useUpdateInsurance, useInsurancePolicy } from '@/hooks/queries/use-insurance';
 import { POLICY_TYPES, PREMIUM_FREQUENCIES } from '@/types/insurance';
 import DatePickerField from '@/components/date-picker-field';
 
 export default function AddInsuranceScreen() {
   const router = useRouter();
+  const { editId } = useLocalSearchParams<{ editId?: string }>();
+  const isEditing = !!editId;
+
+  const { data: existingPolicy } = useInsurancePolicy(editId || '');
   const createMutation = useCreateInsurance();
+  const updateMutation = useUpdateInsurance(editId || '');
 
   const [policyType, setPolicyType] = useState('');
   const [providerName, setProviderName] = useState('');
@@ -20,6 +25,24 @@ export default function AddInsuranceScreen() {
   const [nomineeName, setNomineeName] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [notes, setNotes] = useState('');
+  const [initialized, setInitialized] = useState(!isEditing);
+
+  useEffect(() => {
+    if (existingPolicy && !initialized) {
+      setPolicyType(existingPolicy.policy_type);
+      setProviderName(existingPolicy.provider_name);
+      setPolicyNumber(existingPolicy.policy_number);
+      setSumInsured(existingPolicy.sum_insured != null ? String(existingPolicy.sum_insured) : '');
+      setPremiumAmount(String(existingPolicy.premium_amount));
+      setPremiumFrequency(existingPolicy.premium_frequency);
+      setStartDate(existingPolicy.start_date);
+      setEndDate(existingPolicy.end_date);
+      setNomineeName(existingPolicy.nominee_name ?? '');
+      setVehicleNumber(existingPolicy.vehicle_number ?? '');
+      setNotes(existingPolicy.notes ?? '');
+      setInitialized(true);
+    }
+  }, [existingPolicy, initialized]);
 
   const handleSubmit = async () => {
     if (!policyType || !providerName || !policyNumber || !premiumAmount || !premiumFrequency || !startDate || !endDate) {
@@ -27,30 +50,40 @@ export default function AddInsuranceScreen() {
       return;
     }
 
+    const data = {
+      policy_type: policyType,
+      provider_name: providerName,
+      policy_number: policyNumber,
+      sum_insured: sumInsured ? parseFloat(sumInsured) : null,
+      premium_amount: parseFloat(premiumAmount),
+      premium_frequency: premiumFrequency,
+      start_date: startDate,
+      end_date: endDate,
+      nominee_name: nomineeName || null,
+      vehicle_number: vehicleNumber || null,
+      notes: notes || null,
+    };
+
     try {
-      await createMutation.mutateAsync({
-        policy_type: policyType,
-        provider_name: providerName,
-        policy_number: policyNumber,
-        sum_insured: sumInsured ? parseFloat(sumInsured) : null,
-        premium_amount: parseFloat(premiumAmount),
-        premium_frequency: premiumFrequency,
-        start_date: startDate,
-        end_date: endDate,
-        nominee_name: nomineeName || null,
-        vehicle_number: vehicleNumber || null,
-        notes: notes || null,
-      });
+      if (isEditing) {
+        await updateMutation.mutateAsync(data);
+      } else {
+        await createMutation.mutateAsync(data);
+      }
       router.back();
     } catch (error: any) {
       Alert.alert('Error', error.message);
     }
   };
 
+  const isLoading = createMutation.isPending || updateMutation.isPending;
+
   return (
     <ScrollView className="flex-1 bg-gray-50 dark:bg-gray-900">
       <View className="p-4">
-        <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Add Insurance</Text>
+        <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+          {isEditing ? 'Edit Insurance' : 'Add Insurance'}
+        </Text>
 
         {/* Policy Type */}
         <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Policy Type *</Text>
@@ -189,10 +222,10 @@ export default function AddInsuranceScreen() {
         <TouchableOpacity
           className="bg-primary-600 rounded-lg py-4 mb-4"
           onPress={handleSubmit}
-          disabled={createMutation.isPending}
+          disabled={isLoading}
         >
           <Text className="text-white text-center font-semibold text-lg">
-            {createMutation.isPending ? 'Saving...' : 'Add Policy'}
+            {isLoading ? 'Saving...' : isEditing ? 'Update Policy' : 'Add Policy'}
           </Text>
         </TouchableOpacity>
 

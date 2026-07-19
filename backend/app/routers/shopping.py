@@ -15,8 +15,9 @@ from app.schemas.shopping import (
     ShoppingAnalytics,
     ItemPriceComparison,
     PurchaseItemCreate,
+    BillDraftCreate, BillDraftUpdate, BillDraftResponse,
 )
-from app.services.shopping import ShopService, BillService, AnalyticsService, ChecklistService
+from app.services.shopping import ShopService, BillService, AnalyticsService, ChecklistService, DraftService
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ router = APIRouter(prefix="/api/v1/shopping", tags=["shopping"])
 # --- Save pre-extracted (possibly user-edited) bill data ---
 class OCRBillSaveItem(BaseModel):
     item_name: str
+    brand_name: str | None = None
     quantity: float | None = None
     unit: str | None = None
     mrp: float | None = None
@@ -43,6 +45,8 @@ class OCRBillSaveRequest(BaseModel):
     shop_gstin: Optional[str] = None
     bill_date: str
     total_amount: float
+    purchase_mode: str = "offline"
+    image_url: Optional[str] = None
     items: list[OCRBillSaveItem] = []
 
 
@@ -72,6 +76,7 @@ async def save_ocr_bill(
     items = [
         PurchaseItemCreate(
             item_name=item.item_name,
+            brand_name=item.brand_name,
             quantity=item.quantity,
             unit=item.unit,
             mrp=item.mrp,
@@ -85,6 +90,8 @@ async def save_ocr_bill(
         shop_id=shop_id,
         bill_date=data.bill_date,
         total_amount=D(str(data.total_amount)),
+        purchase_mode=data.purchase_mode,
+        image_url=data.image_url,
         entry_method="ocr",
         items=items,
     )
@@ -299,6 +306,17 @@ async def get_item_prices(
     return await service.get_item_price_comparison(current_user.id, item_name)
 
 
+# --- Item Name Suggestions (autocomplete) ---
+@router.get("/items/suggest", response_model=list[str])
+async def suggest_item_names(
+    q: str = Query(..., min_length=2),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = BillService(db)
+    return await service.suggest_item_names(current_user.id, q)
+
+
 # --- Analytics ---
 @router.get("/analytics", response_model=ShoppingAnalytics)
 async def get_analytics(
@@ -418,3 +436,63 @@ async def delete_checklist_item(
     deleted = await service.delete_item(current_user.id, checklist_id, item_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Item not found")
+
+
+# --- Bill Drafts ---
+@router.get("/drafts", response_model=list[BillDraftResponse])
+async def list_drafts(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = DraftService(db)
+    return await service.list_drafts(current_user.id)
+
+
+@router.post("/drafts", response_model=BillDraftResponse, status_code=status.HTTP_201_CREATED)
+async def create_draft(
+    data: BillDraftCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = DraftService(db)
+    return await service.create_draft(current_user.id, data)
+
+
+@router.get("/drafts/{draft_id}", response_model=BillDraftResponse)
+async def get_draft(
+    draft_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = DraftService(db)
+    draft = await service.get_draft(current_user.id, draft_id)
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    return draft
+
+
+@router.put("/drafts/{draft_id}", response_model=BillDraftResponse)
+async def update_draft(
+    draft_id: UUID,
+    data: BillDraftUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = DraftService(db)
+    draft = await service.get_draft(current_user.id, draft_id)
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    return await service.update_draft(draft, data)
+
+
+@router.delete("/drafts/{draft_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_draft(
+    draft_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = DraftService(db)
+    draft = await service.get_draft(current_user.id, draft_id)
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    await service.delete_draft(draft)

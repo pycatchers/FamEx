@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import Icon from '@react-native-vector-icons/ionicons';
 import {
   useAudioRecorder,
@@ -12,8 +12,11 @@ import {
   setAudioModeAsync,
 } from 'expo-audio';
 import { apiClient, apiUploadFile } from '@/lib/api';
-import { useCreateBill, useShops, useCreateShop } from '@/hooks/queries/use-shopping';
+import { useCreateBill, useShops, useCreateShop, useDraft, useDeleteDraft } from '@/hooks/queries/use-shopping';
+import { useDraftAutosave } from '@/hooks/use-draft-autosave';
+import { PURCHASE_MODES } from '@/types/shopping';
 import DatePickerField from '@/components/date-picker-field';
+import ItemNameInput from '@/components/item-name-input';
 
 interface VoiceItem {
   item_name: string;
@@ -24,6 +27,7 @@ interface VoiceItem {
 
 interface EditableItem {
   item_name: string;
+  brand_name: string;
   quantity: string;
   unit: string;
   bought_price: string;
@@ -34,6 +38,7 @@ const today = () => new Date().toISOString().split('T')[0];
 const toEditable = (items: VoiceItem[]): EditableItem[] =>
   items.map(i => ({
     item_name: i.item_name ?? '',
+    brand_name: '',
     quantity: i.quantity != null ? String(i.quantity) : '',
     unit: i.unit ?? '',
     bought_price: i.bought_price != null ? String(i.bought_price) : '',
@@ -41,20 +46,57 @@ const toEditable = (items: VoiceItem[]): EditableItem[] =>
 
 export default function VoiceBillScreen() {
   const router = useRouter();
+  const { draftId: draftIdParam } = useLocalSearchParams<{ draftId?: string }>();
   const createBill = useCreateBill();
   const createShop = useCreateShop();
+  const deleteDraft = useDeleteDraft();
   const { data: shops } = useShops();
+  const { data: existingDraft, isError: draftLoadFailed } = useDraft(draftIdParam ?? null);
 
-  const [step, setStep] = useState<'input' | 'preview'>('input');
+  const [step, setStep] = useState<'input' | 'preview'>(draftIdParam ? 'preview' : 'input');
   const [spokenText, setSpokenText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [items, setItems] = useState<EditableItem[]>([]);
+  const [draftId, setDraftId] = useState<string | null>(draftIdParam ?? null);
+  const [initialized, setInitialized] = useState(!draftIdParam);
 
   // Preview / save fields
   const [newShopName, setNewShopName] = useState('');
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
   const [billDate, setBillDate] = useState(today());
+  const [purchaseMode, setPurchaseMode] = useState<string>('offline');
+
+  // Rehydrate from an existing draft (resumed via ?draftId=) straight into the preview step.
+  useEffect(() => {
+    if (existingDraft && !initialized) {
+      const d = existingDraft.draft_data as any;
+      if (Array.isArray(d.items) && d.items.length) setItems(d.items);
+      if (d.newShopName != null) setNewShopName(d.newShopName);
+      if (d.selectedShopId !== undefined) setSelectedShopId(d.selectedShopId);
+      if (d.billDate) setBillDate(d.billDate);
+      if (d.purchaseMode) setPurchaseMode(d.purchaseMode);
+      setInitialized(true);
+    }
+  }, [existingDraft, initialized]);
+
+  // If the draft failed to load (e.g. already deleted), fall back to a fresh entry
+  // instead of leaving the user stuck on a permanent loading spinner.
+  useEffect(() => {
+    if (draftLoadFailed && !initialized) {
+      setInitialized(true);
+      setStep('input');
+    }
+  }, [draftLoadFailed, initialized]);
+
+  const isMeaningful = step === 'preview' && items.some((i) => i.item_name.trim() !== '');
+  useDraftAutosave(
+    'voice',
+    { newShopName, selectedShopId, billDate, purchaseMode, items },
+    isMeaningful && initialized,
+    draftId,
+    setDraftId,
+  );
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder);
@@ -174,7 +216,7 @@ export default function VoiceBillScreen() {
   };
 
   const addItem = () => {
-    setItems([...items, { item_name: '', quantity: '', unit: '', bought_price: '' }]);
+    setItems([...items, { item_name: '', brand_name: '', quantity: '', unit: '', bought_price: '' }]);
   };
 
   const removeItem = (index: number) => {
@@ -202,14 +244,17 @@ export default function VoiceBillScreen() {
         shop_id: shopId,
         bill_date: billDate,
         total_amount: totalAmount,
+        purchase_mode: purchaseMode,
         entry_method: 'voice',
         items: validItems.map(i => ({
           item_name: i.item_name.trim(),
+          brand_name: i.brand_name.trim() || null,
           quantity: i.quantity ? parseFloat(i.quantity) || null : null,
           unit: i.unit.trim() || null,
           bought_price: parseFloat(i.bought_price) || 0,
         })),
       });
+      if (draftId) deleteDraft.mutate(draftId);
       router.back();
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to save bill');
@@ -219,6 +264,15 @@ export default function VoiceBillScreen() {
   };
 
   // ── Render: preview / edit step ──────────────────────────────────────────
+  if (step === 'preview' && !initialized) {
+    return (
+      <View className="flex-1 bg-gray-50 dark:bg-gray-900 items-center justify-center">
+        <ActivityIndicator size="large" color="#2563eb" />
+        <Text className="text-gray-600 dark:text-gray-400 mt-4 text-base">Loading draft…</Text>
+      </View>
+    );
+  }
+
   if (step === 'preview') {
     return (
       <ScrollView className="flex-1 bg-gray-50 dark:bg-gray-900" keyboardShouldPersistTaps="handled">
@@ -275,6 +329,26 @@ export default function VoiceBillScreen() {
             maximumDate={new Date()}
           />
 
+          {/* Purchase Mode */}
+          <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Purchase Type</Text>
+          <View className="flex-row mb-4">
+            {PURCHASE_MODES.map((m) => (
+              <TouchableOpacity
+                key={m}
+                className={`mr-2 px-4 py-2 rounded-full flex-row items-center ${purchaseMode === m ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+                onPress={() => setPurchaseMode(m)}
+              >
+                <Icon
+                  name={m === 'online' ? 'globe-outline' : 'storefront-outline'}
+                  size={14}
+                  color={purchaseMode === m ? 'white' : '#6b7280'}
+                  style={{ marginRight: 4 }}
+                />
+                <Text className={`text-sm capitalize ${purchaseMode === m ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{m}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           {/* Items */}
           <View className="flex-row justify-between items-center mb-2 mt-2">
             <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Items ({items.length})</Text>
@@ -286,10 +360,8 @@ export default function VoiceBillScreen() {
           {items.map((item, index) => (
             <View key={index} className="bg-white dark:bg-gray-800 rounded-lg p-3 mb-2 border border-gray-200 dark:border-gray-700">
               <View className="flex-row items-center mb-2">
-                <TextInput
-                  className="flex-1 border border-gray-200 dark:border-gray-600 rounded px-3 py-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700 mr-2"
-                  placeholder="Item name"
-                  placeholderTextColor="#9ca3af"
+                <ItemNameInput
+                  className="border border-gray-200 dark:border-gray-600 rounded px-3 py-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700 mr-2"
                   value={item.item_name}
                   onChangeText={(v) => updateItem(index, 'item_name', v)}
                 />
@@ -297,6 +369,13 @@ export default function VoiceBillScreen() {
                   <Icon name="close-circle" size={22} color="#ef4444" />
                 </TouchableOpacity>
               </View>
+              <TextInput
+                className="border border-gray-200 dark:border-gray-600 rounded px-3 py-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700 mb-2"
+                placeholder="Brand (optional)"
+                placeholderTextColor="#9ca3af"
+                value={item.brand_name}
+                onChangeText={(v) => updateItem(index, 'brand_name', v)}
+              />
               <View className="flex-row items-center gap-2">
                 <View className="w-16">
                   <TextInput

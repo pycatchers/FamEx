@@ -10,6 +10,7 @@ class PurchaseItem(BaseModel, Base):
 
     bill_id = Column(UUID(as_uuid=True), ForeignKey("shopping_bills.id"), nullable=False, index=True)
     item_name = Column(String(255), nullable=False)
+    brand_name = Column(String(255), nullable=True)
     category = Column(String(100), nullable=True)  # dairy, vegetables, fruits, grains, snacks, etc.
     quantity = Column(Numeric(8, 3), nullable=True)
     unit = Column(String(20), nullable=True)  # kg, litre, piece, pack, etc.

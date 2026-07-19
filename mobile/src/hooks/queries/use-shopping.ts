@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
-import { Shop, ShopCreate, RecentShop, ShoppingBill, BillCreate, BillUpdate, ShoppingChecklist, ShoppingAnalytics, ItemPriceComparison } from '@/types/shopping';
+import { Shop, ShopCreate, RecentShop, ShoppingBill, BillCreate, BillUpdate, ShoppingChecklist, ShoppingAnalytics, ItemPriceComparison, BillDraft, BillDraftCreate, BillDraftUpdate } from '@/types/shopping';
 
 // Recent Shops (main Shopping tab)
 export function useRecentShops() {
@@ -171,5 +171,63 @@ export function useItemPriceComparison(itemName: string) {
     queryKey: ['item-prices', itemName],
     queryFn: () => apiClient<ItemPriceComparison[]>(`/api/v1/shopping/items/${encodeURIComponent(itemName)}/prices`),
     enabled: !!itemName && itemName.length >= 2,
+  });
+}
+
+// Item Name Suggestions (autocomplete)
+export function useItemNameSuggestions(query: string) {
+  return useQuery({
+    queryKey: ['item-suggestions', query],
+    queryFn: () => apiClient<string[]>(`/api/v1/shopping/items/suggest?q=${encodeURIComponent(query)}`),
+    enabled: query.trim().length >= 2,
+  });
+}
+
+// Bill Drafts
+export function useDrafts() {
+  return useQuery({
+    queryKey: ['drafts'],
+    queryFn: () => apiClient<BillDraft[]>('/api/v1/shopping/drafts'),
+  });
+}
+
+export function useDraft(id: string | null) {
+  return useQuery({
+    queryKey: ['drafts', id],
+    queryFn: () => apiClient<BillDraft>(`/api/v1/shopping/drafts/${id}`),
+    enabled: !!id,
+  });
+}
+
+export function useCreateDraft() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: BillDraftCreate) =>
+      apiClient<BillDraft>('/api/v1/shopping/drafts', { method: 'POST', body: data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['drafts'] });
+    },
+  });
+}
+
+export function useUpdateDraft() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: BillDraftUpdate }) =>
+      apiClient<BillDraft>(`/api/v1/shopping/drafts/${id}`, { method: 'PUT', body: data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['drafts'] });
+    },
+  });
+}
+
+export function useDeleteDraft() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiClient(`/api/v1/shopping/drafts/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['drafts'] });
+    },
   });
 }

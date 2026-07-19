@@ -1,13 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useCreateLoan } from '@/hooks/queries/use-loans';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useCreateLoan, useUpdateLoan, useLoan } from '@/hooks/queries/use-loans';
 import { LOAN_TYPES } from '@/types/loans';
 import DatePickerField from '@/components/date-picker-field';
 
 export default function AddLoanScreen() {
   const router = useRouter();
+  const { editId } = useLocalSearchParams<{ editId?: string }>();
+  const isEditing = !!editId;
+
+  const { data: existingLoan } = useLoan(editId || '');
   const createMutation = useCreateLoan();
+  const updateMutation = useUpdateLoan(editId || '');
 
   const [loanType, setLoanType] = useState('');
   const [lenderName, setLenderName] = useState('');
@@ -20,6 +25,24 @@ export default function AddLoanScreen() {
   const [endDate, setEndDate] = useState('');
   const [emiDay, setEmiDay] = useState('');
   const [notes, setNotes] = useState('');
+  const [initialized, setInitialized] = useState(!isEditing);
+
+  useEffect(() => {
+    if (existingLoan && !initialized) {
+      setLoanType(existingLoan.loan_type);
+      setLenderName(existingLoan.lender_name);
+      setAccountNumber(existingLoan.loan_account_number ?? '');
+      setPrincipalAmount(String(existingLoan.principal_amount));
+      setInterestRate(String(existingLoan.interest_rate));
+      setTenureMonths(String(existingLoan.tenure_months));
+      setEmiAmount(String(existingLoan.emi_amount));
+      setStartDate(existingLoan.start_date);
+      setEndDate(existingLoan.end_date);
+      setEmiDay(existingLoan.emi_day_of_month != null ? String(existingLoan.emi_day_of_month) : '');
+      setNotes(existingLoan.notes ?? '');
+      setInitialized(true);
+    }
+  }, [existingLoan, initialized]);
 
   const handleSubmit = async () => {
     if (!loanType || !lenderName || !principalAmount || !interestRate || !tenureMonths || !emiAmount || !startDate || !endDate) {
@@ -28,30 +51,50 @@ export default function AddLoanScreen() {
     }
 
     try {
-      await createMutation.mutateAsync({
-        loan_type: loanType,
-        lender_name: lenderName,
-        loan_account_number: accountNumber || null,
-        principal_amount: parseFloat(principalAmount),
-        interest_rate: parseFloat(interestRate),
-        tenure_months: parseInt(tenureMonths),
-        emi_amount: parseFloat(emiAmount),
-        start_date: startDate,
-        end_date: endDate,
-        emi_day_of_month: emiDay ? parseInt(emiDay) : null,
-        outstanding_amount: parseFloat(principalAmount),
-        notes: notes || null,
-      });
+      if (isEditing) {
+        await updateMutation.mutateAsync({
+          loan_type: loanType,
+          lender_name: lenderName,
+          loan_account_number: accountNumber || null,
+          principal_amount: parseFloat(principalAmount),
+          interest_rate: parseFloat(interestRate),
+          tenure_months: parseInt(tenureMonths),
+          emi_amount: parseFloat(emiAmount),
+          start_date: startDate,
+          end_date: endDate,
+          emi_day_of_month: emiDay ? parseInt(emiDay) : null,
+          notes: notes || null,
+        });
+      } else {
+        await createMutation.mutateAsync({
+          loan_type: loanType,
+          lender_name: lenderName,
+          loan_account_number: accountNumber || null,
+          principal_amount: parseFloat(principalAmount),
+          interest_rate: parseFloat(interestRate),
+          tenure_months: parseInt(tenureMonths),
+          emi_amount: parseFloat(emiAmount),
+          start_date: startDate,
+          end_date: endDate,
+          emi_day_of_month: emiDay ? parseInt(emiDay) : null,
+          outstanding_amount: parseFloat(principalAmount),
+          notes: notes || null,
+        });
+      }
       router.back();
     } catch (error: any) {
       Alert.alert('Error', error.message);
     }
   };
 
+  const isLoading = createMutation.isPending || updateMutation.isPending;
+
   return (
     <ScrollView className="flex-1 bg-gray-50 dark:bg-gray-900">
       <View className="p-4">
-        <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Add Loan</Text>
+        <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+          {isEditing ? 'Edit Loan' : 'Add Loan'}
+        </Text>
 
         {/* Loan Type */}
         <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Loan Type *</Text>
@@ -179,10 +222,10 @@ export default function AddLoanScreen() {
         <TouchableOpacity
           className="bg-primary-600 rounded-lg py-4 mb-4"
           onPress={handleSubmit}
-          disabled={createMutation.isPending}
+          disabled={isLoading}
         >
           <Text className="text-white text-center font-semibold text-lg">
-            {createMutation.isPending ? 'Saving...' : 'Add Loan'}
+            {isLoading ? 'Saving...' : isEditing ? 'Update Loan' : 'Add Loan'}
           </Text>
         </TouchableOpacity>
 

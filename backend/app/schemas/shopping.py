@@ -62,6 +62,7 @@ class RecentShopResponse(BaseModel):
 # --- Purchase Item ---
 class PurchaseItemCreate(BaseModel):
     item_name: str
+    brand_name: Optional[str] = None
     category: Optional[str] = None
     quantity: Optional[Decimal] = None
     unit: Optional[str] = None
@@ -74,6 +75,7 @@ class PurchaseItemResponse(BaseModel):
     id: UUID
     bill_id: UUID
     item_name: str
+    brand_name: Optional[str] = None
     category: Optional[str] = None
     quantity: Optional[Decimal] = None
     unit: Optional[str] = None
@@ -94,6 +96,7 @@ class BillCreate(BaseModel):
     discount_amount: Decimal = Decimal("0")
     tax_amount: Decimal = Decimal("0")
     payment_method: Optional[str] = None
+    purchase_mode: str = "offline"
     image_url: Optional[str] = None
     entry_method: str = "manual"
     notes: Optional[str] = None
@@ -108,6 +111,7 @@ class BillUpdate(BaseModel):
     discount_amount: Optional[Decimal] = None
     tax_amount: Optional[Decimal] = None
     payment_method: Optional[str] = None
+    purchase_mode: Optional[str] = None
     image_url: Optional[str] = None
     notes: Optional[str] = None
     items: Optional[list[PurchaseItemCreate]] = None
@@ -123,6 +127,7 @@ class BillResponse(BaseModel):
     discount_amount: Optional[Decimal] = None
     tax_amount: Optional[Decimal] = None
     payment_method: Optional[str] = None
+    purchase_mode: str = "offline"
     image_url: Optional[str] = None
     entry_method: str
     notes: Optional[str] = None
@@ -209,3 +214,23 @@ class ItemPriceComparison(BaseModel):
     avg_price: Decimal
     last_bought_date: date
     last_price: Decimal
+
+
+# --- Bill Draft ---
+class BillDraftCreate(BaseModel):
+    entry_method: str = "manual"
+    draft_data: dict = {}
+
+
+class BillDraftUpdate(BaseModel):
+    draft_data: dict
+
+
+class BillDraftResponse(BaseModel):
+    id: UUID
+    entry_method: str
+    draft_data: dict
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}

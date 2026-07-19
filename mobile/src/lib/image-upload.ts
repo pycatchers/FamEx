@@ -62,3 +62,18 @@ export async function compressAndUpload(
   const compressedUri = await compressImage(uri);
   return uploadImage(compressedUri, bucket, path);
 }
+
+const SHOPPING_BILLS_BUCKET = 'shopping-bills';
+
+/**
+ * Compress and upload a shopping bill photo to the shared shopping-bills bucket,
+ * scoped under the owning user's folder.
+ * @param alreadyCompressed - Set when the caller has already run `compressImage` on `uri`,
+ *   to avoid compressing the same image twice.
+ */
+export async function uploadBillPhoto(uri: string, userId: string, alreadyCompressed = false): Promise<string> {
+  const path = `${userId}/bills/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+  return alreadyCompressed
+    ? uploadImage(uri, SHOPPING_BILLS_BUCKET, path)
+    : compressAndUpload(uri, SHOPPING_BILLS_BUCKET, path);
+}

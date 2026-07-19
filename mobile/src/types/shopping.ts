@@ -41,6 +41,7 @@ export interface PurchaseItem {
   id: string;
   bill_id: string;
   item_name: string;
+  brand_name: string | null;
   category: string | null;
   quantity: number | null;
   unit: string | null;
@@ -52,6 +53,7 @@ export interface PurchaseItem {
 
 export interface PurchaseItemCreate {
   item_name: string;
+  brand_name?: string | null;
   category?: string | null;
   quantity?: number | null;
   unit?: string | null;
@@ -70,6 +72,7 @@ export interface ShoppingBill {
   discount_amount: number | null;
   tax_amount: number | null;
   payment_method: string | null;
+  purchase_mode: string;
   image_url: string | null;
   entry_method: string;
   notes: string | null;
@@ -86,6 +89,7 @@ export interface BillCreate {
   discount_amount?: number;
   tax_amount?: number;
   payment_method?: string | null;
+  purchase_mode?: string;
   image_url?: string | null;
   entry_method?: string;
   notes?: string | null;
@@ -100,6 +104,7 @@ export interface BillUpdate {
   discount_amount?: number;
   tax_amount?: number;
   payment_method?: string | null;
+  purchase_mode?: string;
   image_url?: string | null;
   notes?: string | null;
   items?: PurchaseItemCreate[];
@@ -146,6 +151,7 @@ export interface ItemPriceComparison {
 // OCR extraction result (before saving)
 export interface OCRBillItem {
   item_name: string;
+  brand_name?: string | null;
   quantity: number | null;
   unit: string | null;
   mrp: number | null;
@@ -168,3 +174,27 @@ export const SHOP_CATEGORIES = [
   'Grocery', 'Vegetables', 'Fruits', 'Dairy', 'Medical', 'Electronics',
   'Clothing', 'Hardware', 'Stationery', 'Other',
 ] as const;
+
+export const SHOPPING_UNITS = ['kg', 'g', 'L', 'pcs', 'pack'] as const;
+
+export const PURCHASE_MODES = ['offline', 'online'] as const;
+
+// --- Bill Draft ---
+export const BILL_DRAFT_VERSION = 1;
+
+export interface BillDraft {
+  id: string;
+  entry_method: string;
+  draft_data: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BillDraftCreate {
+  entry_method?: string;
+  draft_data: Record<string, unknown>;
+}
+
+export interface BillDraftUpdate {
+  draft_data: Record<string, unknown>;
+}

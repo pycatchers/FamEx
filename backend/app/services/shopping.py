@@ -8,11 +8,12 @@ from app.models.shop import Shop
 from app.models.bill import ShoppingBill
 from app.models.purchase import PurchaseItem
 from app.models.checklist import ShoppingChecklist, ChecklistItem
+from app.models.bill_draft import BillDraft
 from app.schemas.shopping import (
     ShopCreate, ShopUpdate, BillCreate, BillUpdate,
     ChecklistCreate, ChecklistUpdate, ChecklistItemCreate,
     MonthlySpending, ShopSpending, ItemFrequency, ShoppingAnalytics,
-    RecentShopResponse,
+    RecentShopResponse, BillDraftCreate, BillDraftUpdate,
 )
 
 
@@ -235,6 +236,24 @@ class BillService:
             })
         return comparison
 
+    async def suggest_item_names(self, user_id: UUID, query: str, limit: int = 10) -> list[str]:
+        """Suggest previously-used item names matching a prefix/substring, most-frequent first."""
+        result = await self.db.execute(
+            select(
+                PurchaseItem.item_name,
+                func.count(PurchaseItem.id).label("frequency"),
+            )
+            .join(ShoppingBill, PurchaseItem.bill_id == ShoppingBill.id)
+            .where(
+                ShoppingBill.user_id == user_id,
+                func.lower(PurchaseItem.item_name).contains(query.lower(), autoescape=True),
+            )
+            .group_by(PurchaseItem.item_name)
+            .order_by(func.count(PurchaseItem.id).desc())
+            .limit(limit)
+        )
+        return [row.item_name for row in result.all()]
+
 
 class AnalyticsService:
     def __init__(self, db: AsyncSession):
@@ -431,3 +450,39 @@ class ChecklistService:
         await self.db.delete(item)
         await self.db.flush()
         return True
+
+
+class DraftService:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def list_drafts(self, user_id: UUID) -> list[BillDraft]:
+        result = await self.db.execute(
+            select(BillDraft)
+            .where(BillDraft.user_id == user_id)
+            .order_by(BillDraft.updated_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def get_draft(self, user_id: UUID, draft_id: UUID) -> BillDraft | None:
+        result = await self.db.execute(
+            select(BillDraft).where(BillDraft.id == draft_id, BillDraft.user_id == user_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def create_draft(self, user_id: UUID, data: BillDraftCreate) -> BillDraft:
+        draft = BillDraft(user_id=user_id, entry_method=data.entry_method, draft_data=data.draft_data)
+        self.db.add(draft)
+        await self.db.flush()
+        await self.db.refresh(draft)
+        return draft
+
+    async def update_draft(self, draft: BillDraft, data: BillDraftUpdate) -> BillDraft:
+        draft.draft_data = data.draft_data
+        await self.db.flush()
+        await self.db.refresh(draft)
+        return draft
+
+    async def delete_draft(self, draft: BillDraft) -> None:
+        await self.db.delete(draft)
+        await self.db.flush()

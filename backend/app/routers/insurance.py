@@ -5,7 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.insurance import InsuranceCreate, InsuranceUpdate, InsuranceResponse
+from app.schemas.insurance import (
+    InsuranceCreate, InsuranceUpdate, InsuranceResponse,
+    PremiumPaymentResponse, PremiumPaymentUpdate,
+)
 from app.services.insurance import InsuranceService
 
 router = APIRouter(prefix="/api/v1/insurance", tags=["insurance"])
@@ -70,3 +73,31 @@ async def delete_policy(
     if not policy:
         raise HTTPException(status_code=404, detail="Insurance policy not found")
     await service.delete_policy(policy)
+
+
+@router.get("/{policy_id}/premiums", response_model=list[PremiumPaymentResponse])
+async def get_premium_payments(
+    policy_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = InsuranceService(db)
+    policy = await service.get_policy(current_user.id, policy_id)
+    if not policy:
+        raise HTTPException(status_code=404, detail="Insurance policy not found")
+    return await service.get_premium_payments(policy_id)
+
+
+@router.put("/{policy_id}/premiums/{premium_id}", response_model=PremiumPaymentResponse)
+async def update_premium_payment(
+    policy_id: UUID,
+    premium_id: UUID,
+    data: PremiumPaymentUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = InsuranceService(db)
+    premium = await service.update_premium_payment(current_user.id, policy_id, premium_id, data)
+    if not premium:
+        raise HTTPException(status_code=404, detail="Premium payment not found")
+    return premium

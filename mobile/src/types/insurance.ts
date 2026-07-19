@@ -48,6 +48,17 @@ export interface InsuranceCreate {
 
 export type InsuranceUpdate = Partial<InsuranceCreate>;
 
+export interface PremiumPayment {
+  id: string;
+  policy_id: string;
+  due_date: string;
+  paid_date: string | null;
+  amount: number;
+  status: string;
+  receipt_url: string | null;
+  created_at: string;
+}
+
 export const POLICY_TYPES = [
   { value: 'life', label: 'Life Insurance' },
   { value: 'health', label: 'Health Insurance' },

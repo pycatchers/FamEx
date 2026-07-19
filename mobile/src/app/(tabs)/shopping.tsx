@@ -1,17 +1,30 @@
-import { View, Text, FlatList, TouchableOpacity, RefreshControl, Modal } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, Modal, Alert } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Icon from '@react-native-vector-icons/ionicons';
-import { useRecentShops } from '@/hooks/queries/use-shopping';
-import { RecentShop } from '@/types/shopping';
+import { useRecentShops, useDrafts, useDeleteDraft } from '@/hooks/queries/use-shopping';
+import { RecentShop, BillDraft } from '@/types/shopping';
 import { useState } from 'react';
+
+const DRAFT_ENTRY_ROUTES: Record<string, string> = {
+  manual: '/shopping/add-bill',
+  ocr: '/shopping/ocr-bill',
+  voice: '/shopping/voice-bill',
+};
+
+const DRAFT_ENTRY_LABELS: Record<string, string> = {
+  manual: 'Manual entry',
+  ocr: 'Scanned bill',
+  voice: 'Voice entry',
+};
+
+const formatDate = (d: string | null) => {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+};
 
 function ShopCard({ shop, onPress }: { shop: RecentShop; onPress: () => void }) {
   const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN')}`;
-  const formatDate = (d: string | null) => {
-    if (!d) return '';
-    return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-  };
 
   return (
     <TouchableOpacity
@@ -59,9 +72,25 @@ function ShopCard({ shop, onPress }: { shop: RecentShop; onPress: () => void }) 
 
 export default function ShoppingScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { data: shops, isLoading, refetch } = useRecentShops();
+  const { data: drafts } = useDrafts();
+  const deleteDraft = useDeleteDraft();
   const [refreshing, setRefreshing] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
+
+  const resumeDraft = (draft: BillDraft) => {
+    setShowAddMenu(false);
+    const route = DRAFT_ENTRY_ROUTES[draft.entry_method] ?? '/shopping/add-bill';
+    router.push({ pathname: route, params: { draftId: draft.id } } as any);
+  };
+
+  const confirmDeleteDraft = (draft: BillDraft) => {
+    Alert.alert('Discard Draft', 'This in-progress bill will be deleted.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Discard', style: 'destructive', onPress: () => deleteDraft.mutate(draft.id) },
+    ]);
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -110,7 +139,8 @@ export default function ShoppingScreen() {
 
       {/* Floating Add Button */}
       <TouchableOpacity
-        className="absolute bottom-8 right-6 w-14 h-14 bg-primary-600 rounded-full items-center justify-center shadow-lg"
+        className="absolute right-6 w-14 h-14 bg-primary-600 rounded-full items-center justify-center shadow-lg"
+        style={{ bottom: 32 + insets.bottom }}
         onPress={() => setShowAddMenu(true)}
       >
         <Icon name="add" size={28} color="white" />
@@ -119,8 +149,40 @@ export default function ShoppingScreen() {
       {/* Add Bill Options Modal */}
       <Modal visible={showAddMenu} transparent animationType="slide" onRequestClose={() => setShowAddMenu(false)}>
         <TouchableOpacity className="flex-1 bg-black/40" activeOpacity={1} onPress={() => setShowAddMenu(false)} />
-        <View className="bg-white dark:bg-gray-900 rounded-t-2xl px-6 pt-4 pb-10">
+        <View className="bg-white dark:bg-gray-900 rounded-t-2xl px-6 pt-4" style={{ paddingBottom: Math.max(40, 24 + insets.bottom) }}>
           <View className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full self-center mb-6" />
+
+          {(drafts?.length ?? 0) > 0 && (
+            <View className="mb-4">
+              <Text className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase mb-2">
+                Resume Draft
+              </Text>
+              {drafts!.map((draft) => (
+                <View
+                  key={draft.id}
+                  className="flex-row items-center bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 mb-2"
+                >
+                  <TouchableOpacity className="flex-1 flex-row items-center" onPress={() => resumeDraft(draft)}>
+                    <View className="w-9 h-9 bg-amber-500 rounded-full items-center justify-center mr-3">
+                      <Icon name="document-text-outline" size={18} color="white" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {DRAFT_ENTRY_LABELS[draft.entry_method] ?? 'Draft'}
+                      </Text>
+                      <Text className="text-xs text-gray-500 dark:text-gray-400">
+                        Last edited {formatDate(draft.updated_at)}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity className="p-2" onPress={() => confirmDeleteDraft(draft)}>
+                    <Icon name="trash-outline" size={18} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
           <Text className="text-lg font-bold text-gray-900 dark:text-white mb-4">Add Bill</Text>
 
           <TouchableOpacity

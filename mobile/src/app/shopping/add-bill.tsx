@@ -1,24 +1,58 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import Icon from '@react-native-vector-icons/ionicons';
-import { useCreateBill, useShops, useItemPriceComparison, useCreateShop } from '@/hooks/queries/use-shopping';
-import { PurchaseItemCreate } from '@/types/shopping';
+import { useCreateBill, useShops, useItemPriceComparison, useCreateShop, useDraft, useDeleteDraft } from '@/hooks/queries/use-shopping';
+import { useDraftAutosave } from '@/hooks/use-draft-autosave';
+import { PurchaseItemCreate, SHOPPING_UNITS, PURCHASE_MODES } from '@/types/shopping';
 import DatePickerField from '@/components/date-picker-field';
+import BillPhotoField from '@/components/bill-photo-field';
+import ItemNameInput from '@/components/item-name-input';
 
 export default function AddBillScreen() {
   const router = useRouter();
+  const { draftId: draftIdParam } = useLocalSearchParams<{ draftId?: string }>();
   const createBill = useCreateBill();
   const createShop = useCreateShop();
+  const deleteDraft = useDeleteDraft();
   const { data: shops } = useShops();
+  const { data: existingDraft } = useDraft(draftIdParam ?? null);
 
   const [newShopName, setNewShopName] = useState('');
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
   const [billDate, setBillDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [purchaseMode, setPurchaseMode] = useState<string>('offline');
   const [items, setItems] = useState<PurchaseItemCreate[]>([{ item_name: '', bought_price: 0 }]);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [compareItemName, setCompareItemName] = useState('');
+  const [draftId, setDraftId] = useState<string | null>(draftIdParam ?? null);
+  const [initialized, setInitialized] = useState(!draftIdParam);
   const { data: priceComparison, isLoading: pricesLoading } = useItemPriceComparison(compareItemName);
+
+  // Rehydrate from an existing draft, if one was passed in via ?draftId=.
+  useEffect(() => {
+    if (existingDraft && !initialized) {
+      const d = existingDraft.draft_data as any;
+      if (d.newShopName != null) setNewShopName(d.newShopName);
+      if (d.selectedShopId !== undefined) setSelectedShopId(d.selectedShopId);
+      if (d.billDate) setBillDate(d.billDate);
+      if (d.paymentMethod) setPaymentMethod(d.paymentMethod);
+      if (d.purchaseMode) setPurchaseMode(d.purchaseMode);
+      if (Array.isArray(d.items) && d.items.length) setItems(d.items);
+      if (d.imageUrl !== undefined) setImageUrl(d.imageUrl);
+      setInitialized(true);
+    }
+  }, [existingDraft, initialized]);
+
+  const isMeaningful = newShopName.trim() !== '' || items.some((i) => i.item_name.trim() !== '');
+  useDraftAutosave(
+    'manual',
+    { newShopName, selectedShopId, billDate, paymentMethod, purchaseMode, items, imageUrl },
+    isMeaningful && initialized,
+    draftId,
+    setDraftId,
+  );
 
   const addItem = () => {
     setItems([...items, { item_name: '', bought_price: 0 }]);
@@ -36,6 +70,10 @@ export default function AddBillScreen() {
   };
 
   const totalAmount = items.reduce((sum, item) => sum + (parseFloat(item.bought_price as any) || 0), 0);
+
+  const filteredShops = newShopName.trim()
+    ? shops?.filter((s) => s.name.toLowerCase().includes(newShopName.trim().toLowerCase()))
+    : shops;
 
   const handleSubmit = async () => {
     const validItems = items.filter(i => i.item_name.trim() && parseFloat(i.bought_price as any) > 0);
@@ -56,9 +94,12 @@ export default function AddBillScreen() {
         bill_date: billDate,
         total_amount: totalAmount,
         payment_method: paymentMethod,
+        purchase_mode: purchaseMode,
+        image_url: imageUrl,
         entry_method: 'manual',
         items: validItems,
       });
+      if (draftId) deleteDraft.mutate(draftId);
       router.back();
     } catch (error: any) {
       Alert.alert('Error', error.message);
@@ -94,7 +135,7 @@ export default function AddBillScreen() {
               >
                 <Text className={`text-sm ${!selectedShopId && !newShopName ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>None</Text>
               </TouchableOpacity>
-              {shops?.map((shop) => (
+              {filteredShops?.map((shop) => (
                 <TouchableOpacity
                   key={shop.id}
                   className={`mr-2 px-3 py-2 rounded-full ${selectedShopId === shop.id ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'}`}
@@ -117,6 +158,26 @@ export default function AddBillScreen() {
           maximumDate={new Date()}
         />
 
+        {/* Purchase Mode */}
+        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Purchase Type</Text>
+        <View className="flex-row mb-4">
+          {PURCHASE_MODES.map((m) => (
+            <TouchableOpacity
+              key={m}
+              className={`mr-2 px-4 py-2 rounded-full flex-row items-center ${purchaseMode === m ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+              onPress={() => setPurchaseMode(m)}
+            >
+              <Icon
+                name={m === 'online' ? 'globe-outline' : 'storefront-outline'}
+                size={14}
+                color={purchaseMode === m ? 'white' : '#6b7280'}
+                style={{ marginRight: 4 }}
+              />
+              <Text className={`text-sm capitalize ${purchaseMode === m ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{m}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {/* Payment Method */}
         <Text className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment</Text>
         <View className="flex-row mb-4">
@@ -131,6 +192,9 @@ export default function AddBillScreen() {
           ))}
         </View>
 
+        {/* Photo */}
+        <BillPhotoField imageUrl={imageUrl} onChange={setImageUrl} />
+
         {/* Items */}
         <View className="flex-row justify-between items-center mb-2">
           <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">Items</Text>
@@ -143,10 +207,8 @@ export default function AddBillScreen() {
           <View key={index} className="bg-white dark:bg-gray-800 rounded-lg p-3 mb-2 border border-gray-200 dark:border-gray-700">
             <View className="flex-row items-center mb-2">
               <View className="flex-1 mr-2">
-                <TextInput
+                <ItemNameInput
                   className="border border-gray-200 dark:border-gray-600 rounded px-3 py-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700"
-                  placeholder="Item name"
-                  placeholderTextColor="#9ca3af"
                   value={item.item_name}
                   onChangeText={(v) => updateItem(index, 'item_name', v)}
                   onBlur={() => {
@@ -160,6 +222,13 @@ export default function AddBillScreen() {
                 <Icon name="close-circle" size={22} color="#ef4444" />
               </TouchableOpacity>
             </View>
+            <TextInput
+              className="border border-gray-200 dark:border-gray-600 rounded px-3 py-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700 mb-2"
+              placeholder="Brand (optional)"
+              placeholderTextColor="#9ca3af"
+              value={item.brand_name ?? ''}
+              onChangeText={(v) => updateItem(index, 'brand_name', v)}
+            />
             <View className="flex-row items-center gap-2">
               <View className="w-16">
                 <TextInput
@@ -176,8 +245,8 @@ export default function AddBillScreen() {
                   keyboardType="decimal-pad"
                 />
               </View>
-              <View className="flex-row flex-1">
-                {['kg', 'L', 'pcs', 'pack'].map((u) => (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-1" contentContainerStyle={{ flexGrow: 1 }}>
+                {SHOPPING_UNITS.map((u) => (
                   <TouchableOpacity
                     key={u}
                     className={`px-2 py-1.5 rounded mr-1 ${item.unit === u ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-700'}`}
@@ -186,7 +255,7 @@ export default function AddBillScreen() {
                     <Text className={`text-xs ${item.unit === u ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`}>{u}</Text>
                   </TouchableOpacity>
                 ))}
-              </View>
+              </ScrollView>
               <View className="w-24">
                 <TextInput
                   className="border border-gray-200 dark:border-gray-600 rounded px-3 py-2 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700"

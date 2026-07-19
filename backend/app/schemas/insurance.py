@@ -75,3 +75,22 @@ class InsuranceResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class PremiumPaymentResponse(BaseModel):
+    id: UUID
+    policy_id: UUID
+    due_date: date
+    paid_date: Optional[date] = None
+    amount: Decimal
+    status: str
+    receipt_url: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PremiumPaymentUpdate(BaseModel):
+    paid_date: Optional[date] = None
+    status: Optional[str] = None
+    receipt_url: Optional[str] = None

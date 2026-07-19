@@ -1,5 +1,6 @@
 from sqlalchemy import Column, String, Date, ForeignKey, Text, Numeric
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 from app.models import BaseModel
 from app.database import Base
 
@@ -27,3 +28,20 @@ class InsurancePolicy(BaseModel, Base):
     document_url = Column(String(500), nullable=True)
     status = Column(String(20), nullable=False, default="active")  # active, expired, cancelled, claimed
     notes = Column(Text, nullable=True)
+
+    # Relationships
+    premium_payments = relationship("PremiumPayment", back_populates="policy", cascade="all, delete-orphan")
+
+
+class PremiumPayment(BaseModel, Base):
+    __tablename__ = "premium_payments"
+
+    policy_id = Column(UUID(as_uuid=True), ForeignKey("insurance_policies.id"), nullable=False, index=True)
+    due_date = Column(Date, nullable=False)
+    paid_date = Column(Date, nullable=True)
+    amount = Column(Numeric(10, 2), nullable=False)
+    status = Column(String(20), nullable=False, default="upcoming")  # upcoming, paid, overdue, skipped
+    receipt_url = Column(String(500), nullable=True)
+
+    # Relationships
+    policy = relationship("InsurancePolicy", back_populates="premium_payments")

@@ -38,11 +38,12 @@ class BaseModel(Base):
 from app.models.family import FamilyMember  # noqa: E402, F401
 from app.models.document import Document  # noqa: E402, F401
 from app.models.loan import Loan, EMIPayment  # noqa: E402, F401
-from app.models.insurance import InsurancePolicy  # noqa: E402, F401
+from app.models.insurance import InsurancePolicy, PremiumPayment  # noqa: E402, F401
 from app.models.reminder import Reminder  # noqa: E402, F401
 from app.models.shop import Shop  # noqa: E402, F401
 from app.models.bill import ShoppingBill  # noqa: E402, F401
 from app.models.purchase import PurchaseItem  # noqa: E402, F401
+from app.models.bill_draft import BillDraft  # noqa: E402, F401
 from app.models.checklist import ShoppingChecklist, ChecklistItem  # noqa: E402, F401
 from app.models.hospital import Hospital  # noqa: E402, F401
 from app.models.doctor import Doctor  # noqa: E402, F401

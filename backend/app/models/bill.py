@@ -16,6 +16,7 @@ class ShoppingBill(BaseModel, Base):
     discount_amount = Column(Numeric(10, 2), default=0)
     tax_amount = Column(Numeric(10, 2), default=0)
     payment_method = Column(String(20), nullable=True)  # cash, upi, card, other
+    purchase_mode = Column(String(10), nullable=False, default="offline")  # online, offline
     image_url = Column(String(500), nullable=True)
     entry_method = Column(String(20), nullable=False, default="manual")  # ocr, manual, voice
     notes = Column(Text, nullable=True)
